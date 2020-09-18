@@ -6,6 +6,10 @@ use fltk::{app::*, input::*, table::*};
 use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
 
+mod counter;
+
+use counter::Counter;
+
 struct MyTable {
     wid: TableRow,
 }
@@ -63,7 +67,7 @@ fn main() {
     {
         let mut lens = lens.write().unwrap();
         if lens.get_locations().len() == 0 {
-            lens.add_location("TankTemp", "/home/jesper");
+            lens.add_location("TankTemp", "/home/jesper/Documents");
         }
         let paths = lens
             .get_locations()
@@ -144,7 +148,8 @@ fn main() {
         let mut cr = 0;
         dir_tbl_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
         println!("Things changed!, {} {}", rt, rb);
-        file_tbl.set_dir_id(rt as usize);
+
+        file_tbl.set_dir_ix(rt as usize);
     }));
 
     wind.end();
@@ -174,21 +179,6 @@ fn draw_data(s: &str, x: i32, y: i32, w: i32, h: i32, selected: bool, align: Ali
     draw::pop_clip();
 }
 
-pub struct Counter {
-    pub count: usize,
-}
-
-impl Counter {
-    pub fn new() -> Self {
-        Counter { count: 0 }
-    }
-
-    pub fn get_next(&mut self, margin: usize, size: usize) -> i32 {
-        let pos = self.count + margin;
-        self.count += size;
-        return pos as i32;
-    }
-}
 
 struct FileTable {
     wid: TableRow,
@@ -258,7 +248,7 @@ impl FileTable {
         table
     }
 
-    pub fn set_dir_id(&mut self, new_id: usize) {
+    pub fn set_dir_ix(&mut self, new_id: usize) {
         println!("Got new file id: {}", new_id);
         let mut dir_id = self.dir_id.write().unwrap();
         println!("Got old file id: {:?}", *dir_id);
@@ -266,7 +256,7 @@ impl FileTable {
             *dir_id = Some(new_id);
             let len = self.lens.read().unwrap().get_file_count(new_id).unwrap();
             self.wid.set_rows(len as u32);
-            // self.wid.redraw();
+            self.wid.redraw();
             println!("Redrawing, len {}", len);
         }
     }
