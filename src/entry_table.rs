@@ -3,11 +3,11 @@ use fltk::{table::*};
 
 use crate::table_utils::{draw_data, draw_header};
 
-pub struct MyTable {
+pub struct EntryTable {
    pub wid: TableRow,
 }
 
-impl MyTable {
+impl EntryTable {
     pub fn new(
         x: i32,
         y: i32,
@@ -16,8 +16,8 @@ impl MyTable {
         headers: Vec<String>,
         row_count: u32,
         cell_data: Box<dyn Fn(i32, i32) -> (String, Align)>,
-    ) -> MyTable {
-        let mut table = MyTable {
+    ) -> EntryTable {
+        let mut table = EntryTable {
             wid: TableRow::new(x, y, w, h, ""),
         };
 

@@ -3,18 +3,19 @@ use std::sync::{Arc, RwLock};
 use fltk::*;
 use fltk::{app::*, input::*};
 
+use open;
+
 use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
 
 mod counter;
-mod table_utils;
-mod file_table;
 mod entry_table;
-
+mod file_table;
+mod table_utils;
 
 use counter::Counter;
+use entry_table::EntryTable;
 use file_table::FileTable;
-use entry_table::MyTable;
 
 fn main() {
     println!("Starting");
@@ -23,6 +24,7 @@ fn main() {
         let mut lens = lens.write().unwrap();
         if lens.get_locations().len() == 0 {
             lens.add_location("TankTemp", "/home/jesper/Documents");
+            lens.add_location("MegaPics", "/home/jesper/Pictures");
         }
         let paths = lens
             .get_locations()
@@ -39,7 +41,7 @@ fn main() {
 
     let mut app = App::default();
     app.set_scheme(app::AppScheme::Gtk);
-    let mut wind = window::Window::new(100, 100, 800, 700, "Table");
+    let mut wind = window::Window::new(100, 100, 800, 715, "Table");
 
     println!("Setup app widgets");
     let mut input = Input::new(60, h_count.get_next(5, 30), 200, 30, "Search");
@@ -47,7 +49,7 @@ fn main() {
     // Setup dir table
     let lens_c = lens.clone();
 
-    let mut dir_tbl = MyTable::new(
+    let mut dir_tbl = EntryTable::new(
         5,
         h_count.get_next(5, 390),
         790,
@@ -67,11 +69,15 @@ fn main() {
     );
 
     // Setup file table
-    let mut file_tbl = FileTable::new(5, h_count.get_next(5, 390), 790, 390, lens.clone());
-
+    let mut file_tbl = FileTable::new(5, h_count.get_next(5, 290), 790, 290, lens.clone());
+    let file_tbl_c = file_tbl.clone();
     file_tbl.handle(Box::new(move |evt: Event| {
         if evt == Event::Push {
-            println!("Event: {:?}, {:?}", evt, app::event_clicks());
+            let path = file_tbl_c.get_selected_file_path();
+            println!("Event: {:?}, {:?}, {:?}", evt, app::event_clicks(), path);
+            if app::event_clicks() && path.is_some() {
+                open::that_in_background(path.unwrap());
+            }
         }
         false
     }));
@@ -94,7 +100,7 @@ fn main() {
     }));
 
     let dir_tbl_c = dir_tbl.wid.clone();
-    // let file_tbl_c = file_tbl.clone();
+    let mut file_tbl_c = file_tbl.clone();
     dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
     dir_tbl.wid.set_callback(Box::new(move || {
         let mut cl = 0;
@@ -104,11 +110,24 @@ fn main() {
         dir_tbl_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
         println!("Things changed!, {} {}", rt, rb);
 
-        file_tbl.set_dir_ix(rt as usize);
+        file_tbl_c.set_dir_ix(rt as usize);
+    }));
+
+    let mut file_tbl_c = file_tbl.clone();
+    // let file_tbl_c = file_tbl.clone();
+    file_tbl.set_trigger(CallbackTrigger::Changed);
+    file_tbl.set_callback(Box::new(move || {
+        let mut cl = 0;
+        let mut rt = 0;
+        let mut rb = 0;
+        let mut cr = 0;
+        file_tbl_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
+        println!("Files changed!, {} {}", rt, rb);
+
+        file_tbl_c.set_file_ix(rt as usize);
     }));
 
     wind.end();
     wind.show();
     app.run().unwrap();
 }
-
