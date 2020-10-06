@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use fltk::*;
-use fltk::{app::*, input::*};
+use fltk::{app::*, button::*, input::*};
 
 use open;
 
@@ -44,7 +44,23 @@ fn main() {
     let mut wind = window::Window::new(100, 100, 800, 715, "Table");
 
     println!("Setup app widgets");
-    let mut input = Input::new(60, h_count.get_next(5, 30), 200, 30, "Search");
+    let input_h = h_count.get_next(5, 30);
+    let mut input = Input::new(60, input_h, 200, 25, "Search");
+
+    let mut but = Button::new(280, input_h, 80, 25, "Click me!");
+    but.set_callback(Box::new(move || {
+        println!("Hello World!");
+        let mut dialog = window::Window::new(300, 100, 300, 415, "Dialog");
+        dialog.make_modal(true);
+        dialog.show();
+        while dialog.shown() {
+            fltk::app::wait();
+        }
+        //         Fl_Window* w = new Fl_Window(400, 300);
+        // w->set_modal();
+        // w->show();
+        // while (w->shown()) Fl::wait();
+    }));
 
     // Setup dir table
     let lens_c = lens.clone();
