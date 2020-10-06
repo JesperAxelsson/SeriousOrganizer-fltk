@@ -47,19 +47,33 @@ fn main() {
     let input_h = h_count.get_next(5, 30);
     let mut input = Input::new(60, input_h, 200, 25, "Search");
 
-    let mut but = Button::new(280, input_h, 80, 25, "Click me!");
+    let lens_c = lens.clone();
+
+    let mut but_reload = Button::new(280, input_h, 60, 25, "Reload!");
+    but_reload.set_callback(Box::new(move || {
+        let mut lens = lens_c.write().unwrap();
+        println!("Start update data");
+
+        let paths = lens
+            .get_locations()
+            .iter()
+            .map(|e| (e.id, e.path.clone()))
+            .collect();
+        let mut dir_s = dir_search::get_all_data(paths);
+        
+        lens.update_data(&mut dir_s);
+        println!("Done update data");
+    }));
+
+    let mut but = Button::new(350, input_h, 80, 25, "Click me!");
     but.set_callback(Box::new(move || {
         println!("Hello World!");
         let mut dialog = window::Window::new(300, 100, 300, 415, "Dialog");
         dialog.make_modal(true);
         dialog.show();
         while dialog.shown() {
-            fltk::app::wait();
+            let _ = fltk::app::wait();
         }
-        //         Fl_Window* w = new Fl_Window(400, 300);
-        // w->set_modal();
-        // w->show();
-        // while (w->shown()) Fl::wait();
     }));
 
     // Setup dir table
