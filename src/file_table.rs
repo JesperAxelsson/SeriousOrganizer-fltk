@@ -8,7 +8,7 @@ use serious_organizer_lib::lens::Lens;
 use crate::table_utils::{draw_data, draw_header};
 #[derive(Clone)]
 pub struct FileTable {
-pub    wid: TableRow,
+    pub wid: TableRow,
     dir_id: Arc<RwLock<Option<usize>>>,
     file_id: Arc<RwLock<Option<usize>>>,
     lens: Arc<RwLock<Lens>>,
@@ -83,20 +83,34 @@ impl FileTable {
         println!("Got old dir id: {:?}", *dir_id);
         if dir_id.is_none() || dir_id.unwrap() != new_id {
             *dir_id = Some(new_id);
-            let len = self.lens.read().unwrap().get_file_count(new_id).unwrap();
-            self.wid.set_rows(len as u32);
-            self.wid.redraw();
-            println!("Redrawing, len {}", len);
+
+            // get_dir_count
+            let lens = self.lens.read().unwrap();
+            if new_id < lens.get_dir_count() {
+                let len = self.lens.read().unwrap().get_file_count(new_id).unwrap();
+                self.wid.set_rows(len as u32);
+                self.wid.redraw();
+                println!("Redrawing, len {}", len);
+            }
         }
     }
 
-
     pub fn set_file_ix(&mut self, new_id: usize) {
         println!("Got new file id: {}", new_id);
-        let mut file_id = self.file_id.write().unwrap();
-        println!("Got old file id: {:?}", *file_id);
-        if file_id.is_none() || file_id.unwrap() != new_id {
-            *file_id = Some(new_id);
+        // let mut file_id = self.file_id.write().unwrap();
+        let file_id_lock = self.file_id.write();
+
+        if file_id_lock.is_err() {
+            println!("file_id lock were none?!");
+        }
+
+        if let Ok(mut file_id) = file_id_lock {
+            // if file_id_lock.is_ok() {
+            // let mut file_id = file_id_lock.unwrap();
+            println!("Got old file id: {:?}", *file_id);
+            if file_id.is_none() || file_id.unwrap() != new_id {
+                *file_id = Some(new_id);
+            }
         }
     }
 
@@ -132,7 +146,6 @@ impl FileTable {
     //     self.wid.set_rows(new_count);
     // }
 }
- 
 
 use std::ops::{Deref, DerefMut};
 
