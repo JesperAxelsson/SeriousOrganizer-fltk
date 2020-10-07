@@ -139,7 +139,9 @@ fn main() {
         dir_tbl_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
         println!("Things changed!, {} {}", rt, rb);
 
+        if rt >= 0 {
         file_tbl_c.set_dir_ix(rt as usize);
+        }
     }));
 
     let mut file_tbl_c = file_tbl.clone();
