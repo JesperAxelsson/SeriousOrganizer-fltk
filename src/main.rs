@@ -11,8 +11,9 @@ use serious_organizer_lib::lens::Lens;
 mod counter;
 mod entry_table;
 mod file_table;
-mod table_utils;
 mod location_dialog;
+mod location_table;
+mod table_utils;
 
 use counter::Counter;
 use entry_table::EntryTable;
@@ -21,23 +22,7 @@ use file_table::FileTable;
 fn main() {
     println!("Starting");
     let lens = Arc::new(RwLock::new(Lens::new()));
-    {
-        let mut lens = lens.write().unwrap();
-        if lens.get_locations().len() == 0 {
-            lens.add_location("TankTemp", "/home/jesper/Documents");
-            lens.add_location("MegaPics", "/home/jesper/Pictures");
-        }
-        let paths = lens
-            .get_locations()
-            .iter()
-            .map(|e| (e.id, e.path.clone()))
-            .collect();
-        let mut dir_s = dir_search::get_all_data(paths);
-
-        println!("Update data");
-        lens.update_data(&mut dir_s);
-    }
-
+ 
     let mut h_count = Counter::new();
 
     let mut app = App::default();
@@ -61,7 +46,7 @@ fn main() {
             .map(|e| (e.id, e.path.clone()))
             .collect();
         let mut dir_s = dir_search::get_all_data(paths);
-        
+
         lens.update_data(&mut dir_s);
         println!("Done update data");
     }));
@@ -140,7 +125,7 @@ fn main() {
         println!("Things changed!, {} {}", rt, rb);
 
         if rt >= 0 {
-        file_tbl_c.set_dir_ix(rt as usize);
+            file_tbl_c.set_dir_ix(rt as usize);
         }
     }));
 

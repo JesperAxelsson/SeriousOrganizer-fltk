@@ -1,7 +1,10 @@
 use fltk::*;
 use fltk::{button::*, input::*, window::*};
 use serious_organizer_lib::lens::Lens;
-use std::sync::{Arc, RwLock};
+// use serious_organizer_lib::lens
+use std::sync::{Arc, Mutex, RwLock};
+
+use crate::location_table;
 
 pub struct Location {
     name: Option<String>,
@@ -44,6 +47,7 @@ impl Location {
 pub struct LocationDialog {
     lens: Arc<RwLock<Lens>>,
     location: Arc<RwLock<Location>>,
+    selected_location: Arc<Mutex<Option<usize>>>,
 }
 
 impl LocationDialog {
@@ -54,6 +58,7 @@ impl LocationDialog {
                 name: None,
                 path: None,
             })),
+            selected_location: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -64,20 +69,73 @@ impl LocationDialog {
         let lens_c = self.lens.clone();
 
         let mut input_name = Input::new(60, 10, 80, 25, "Name");
-        let mut input_path = Input::new(190, 10, 150, 25, "Path");
+        let mut input_path = Input::new(190, 10, 140, 25, "Path");
+        let mut but_save = Button::new(350, 10, 60, 25, "Save");
+        let mut but_delete = Button::new(420, 10, 60, 25, "Remove");
 
-        let mut but_save = Button::new(360, 10, 60, 25, "Save");
+        let mut location_table = location_table::LocationTable::new(
+            5,
+            45,
+            480,
+            390,
+            vec!["Name".to_string(), "Path".to_string()],
+            self.lens.read().unwrap().get_locations().len() as u32,
+            Box::new(move |row, col| {
+                let l = lens_c.read().unwrap();
+                let loc_list = l.get_locations();
+                if loc_list.len() >= row as usize {
+                    let ref loc = loc_list[row as usize];
 
+                    match col {
+                        0 => (loc.name.to_string(), Align::Left),
+                        1 => (loc.path.to_string(), Align::Left),
+                        _ => ("".to_string(), Align::Center),
+                    }
+                } else {
+                    print!("Invalid location row: {}", row);
+                    ("".to_string(), Align::Center)
+                }
+            }),
+        );
+
+        // Button save callback
         let location_c = self.location.clone();
+        let lens_c = self.lens.clone();
+        let mut table_c = location_table.clone();
         but_save.set_callback(Box::new(move || {
             let loc = location_c.read().unwrap();
             if let Some((name, path)) = loc.values() {
                 let mut lens = lens_c.write().unwrap();
                 lens.add_location(&name, &path);
-                println!("Add name: {} location: {}", name, path);
+
+                let len = lens.get_locations().len();
+                table_c.set_rows(len as u32);
+                table_c.redraw();
             }
         }));
         but_save.deactivate();
+
+        // Button delete callback
+        let lens_c = self.lens.clone();
+        let select_c = self.selected_location.clone();
+        let mut table_c = location_table.clone();
+        but_delete.set_callback(Box::new(move || {
+            let select = *select_c.lock().unwrap();
+            if let Some(loc_ix) = select {
+                let mut lens = lens_c.write().unwrap();
+
+                let locations = lens.get_locations();
+                let ref loc = locations[loc_ix as usize];
+                let loc_id: i32 = loc.id.into();
+
+                lens.remove_location(loc_id as u32);
+
+                let len = lens.get_locations().len();
+                table_c.set_rows(len as u32);
+                table_c.redraw();
+            }
+        }));
+        but_delete.deactivate();
 
         // Name changed
         input_name.set_trigger(CallbackTrigger::Changed);
@@ -109,6 +167,27 @@ impl LocationDialog {
             if loc.valid() {
                 but_c.activate();
             } else {
+                but_c.deactivate();
+            }
+        }));
+
+        // Location selected
+        let table_c = location_table.clone();
+        let select_c = self.selected_location.clone();
+        let mut but_c = but_delete.clone();
+        location_table.wid.set_trigger(CallbackTrigger::Changed);
+        location_table.wid.set_callback(Box::new(move || {
+            let mut cl = 0;
+            let mut rt = 0;
+            let mut rb = 0;
+            let mut cr = 0;
+            table_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
+            println!("Select location!, {} {}", rt, rb);
+            if rt >= 0 {
+                *select_c.lock().unwrap() = Some(rt as usize);
+                but_c.activate();
+            } else {
+                *select_c.lock().unwrap() = None;
                 but_c.deactivate();
             }
         }));
