@@ -12,6 +12,7 @@ mod counter;
 mod entry_table;
 mod file_table;
 mod table_utils;
+mod path_dialog;
 
 use counter::Counter;
 use entry_table::EntryTable;
@@ -65,15 +66,13 @@ fn main() {
         println!("Done update data");
     }));
 
+    let lens_c = lens.clone();
+
     let mut but = Button::new(350, input_h, 80, 25, "Click me!");
     but.set_callback(Box::new(move || {
         println!("Hello World!");
-        let mut dialog = window::Window::new(300, 100, 300, 415, "Dialog");
-        dialog.make_modal(true);
+        let dialog = path_dialog::PathDialog::new(lens_c.clone());
         dialog.show();
-        while dialog.shown() {
-            let _ = fltk::app::wait();
-        }
     }));
 
     // Setup dir table
