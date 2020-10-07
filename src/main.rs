@@ -12,7 +12,7 @@ mod counter;
 mod entry_table;
 mod file_table;
 mod table_utils;
-mod path_dialog;
+mod location_dialog;
 
 use counter::Counter;
 use entry_table::EntryTable;
@@ -71,7 +71,7 @@ fn main() {
     let mut but = Button::new(350, input_h, 80, 25, "Click me!");
     but.set_callback(Box::new(move || {
         println!("Hello World!");
-        let dialog = path_dialog::PathDialog::new(lens_c.clone());
+        let dialog = location_dialog::LocationDialog::new(lens_c.clone());
         dialog.show();
     }));
 
