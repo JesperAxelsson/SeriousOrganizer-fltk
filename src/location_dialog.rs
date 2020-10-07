@@ -41,14 +41,14 @@ impl Location {
     }
 }
 
-pub struct PathDialog {
+pub struct LocationDialog {
     lens: Arc<RwLock<Lens>>,
     location: Arc<RwLock<Location>>,
 }
 
-impl PathDialog {
+impl LocationDialog {
     pub fn new(lens: Arc<RwLock<Lens>>) -> Self {
-        PathDialog {
+        LocationDialog {
             lens,
             location: Arc::new(RwLock::new(Location {
                 name: None,
@@ -79,6 +79,7 @@ impl PathDialog {
         }));
         but_save.deactivate();
 
+        // Name changed
         input_name.set_trigger(CallbackTrigger::Changed);
         let input_c = input_name.clone();
         let location_c = self.location.clone();
@@ -95,6 +96,7 @@ impl PathDialog {
             }
         }));
 
+        // Path changed
         input_path.set_trigger(CallbackTrigger::Changed);
         let input_c = input_path.clone();
         let location_c = self.location.clone();
