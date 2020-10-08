@@ -14,6 +14,7 @@ mod file_table;
 mod location_dialog;
 mod location_table;
 mod table_utils;
+mod layout;
 
 use counter::Counter;
 use entry_table::EntryTable;
