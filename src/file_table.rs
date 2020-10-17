@@ -1,4 +1,6 @@
-use std::sync::{Arc, RwLock};
+use std::sync::atomic::{AtomicIsize, Ordering};
+use std::sync::{Arc};
+use parking_lot::Mutex;
 
 use fltk::table::*;
 use fltk::*;
@@ -9,21 +11,19 @@ use crate::table_utils::{draw_data, draw_header};
 #[derive(Clone)]
 pub struct FileTable {
     pub wid: TableRow,
-    dir_id: Arc<RwLock<Option<usize>>>,
-    file_id: Arc<RwLock<Option<usize>>>,
-    lens: Arc<RwLock<Lens>>,
+    dir_id: Arc<AtomicIsize>,
+    file_id: Arc<AtomicIsize>,
+    lens: Arc<Mutex<Lens>>,
 }
 
-// use std::rc::Rc;
-
 impl FileTable {
-    pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<RwLock<Lens>>) -> FileTable {
+    pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> FileTable {
         let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
         let mut table = FileTable {
             wid: TableRow::new(x, y, w, h, ""),
             lens: lens,
-            dir_id: Arc::new(RwLock::new(None)),
-            file_id: Arc::new(RwLock::new(None)),
+            dir_id: Arc::new(AtomicIsize::new(-1)),
+            file_id: Arc::new(AtomicIsize::new(-1)),
         };
 
         table.wid.set_row_height_all(20);
@@ -41,7 +41,6 @@ impl FileTable {
 
         let lens_c = table.lens.clone();
         let dir_id_c = table.dir_id.clone();
-        // (*Rc::get_mut(&mut table).unwrap()).wid.draw_cell(Box::new(
         table
             .wid
             .draw_cell(Box::new(move |ctx, row, col, x, y, w, h| match ctx {
@@ -49,9 +48,10 @@ impl FileTable {
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
                 table::TableContext::Cell => {
-                    if let Some(dir_id) = *dir_id_c.read().unwrap() {
+                    let dir_id = dir_id_c.load(Ordering::Relaxed);
+                    if dir_id >= 0 {
                         let selected = table_c.row_selected(row);
-                        let l = lens_c.read().unwrap();
+                        let l = lens_c.lock();
                         let files = l.get_dir_files(dir_id as usize).unwrap();
                         let file = &files[row as usize];
                         match col {
@@ -79,15 +79,17 @@ impl FileTable {
 
     pub fn set_dir_ix(&mut self, new_id: usize) {
         println!("Got new dir id: {}", new_id);
-        let mut dir_id = self.dir_id.write().unwrap();
-        println!("Got old dir id: {:?}", *dir_id);
-        if dir_id.is_none() || dir_id.unwrap() != new_id {
-            *dir_id = Some(new_id);
+        let old_id = self.dir_id.load(Ordering::Relaxed);
+        let new_id_i = new_id as isize;
+        println!("Got old dir id: {:?}", old_id);
+
+        if old_id != new_id_i {
+            self.dir_id.store(new_id_i, Ordering::Relaxed);
 
             // get_dir_count
-            let lens = self.lens.read().unwrap();
+            let lens = self.lens.lock();
             if new_id < lens.get_dir_count() {
-                let len = self.lens.read().unwrap().get_file_count(new_id).unwrap();
+                let len = lens.get_file_count(new_id).unwrap();
                 self.wid.set_rows(len as u32);
                 self.wid.redraw();
                 println!("Redrawing, len {}", len);
@@ -97,42 +99,21 @@ impl FileTable {
 
     pub fn set_file_ix(&mut self, new_id: usize) {
         println!("Got new file id: {}", new_id);
-        // let mut file_id = self.file_id.write().unwrap();
-        let file_id_lock = self.file_id.write();
-
-        if file_id_lock.is_err() {
-            println!("file_id lock were none?!");
-        }
-
-        if let Ok(mut file_id) = file_id_lock {
-            // if file_id_lock.is_ok() {
-            // let mut file_id = file_id_lock.unwrap();
-            println!("Got old file id: {:?}", *file_id);
-            if file_id.is_none() || file_id.unwrap() != new_id {
-                *file_id = Some(new_id);
-            }
-        }
+        self.file_id.store(new_id as isize, Ordering::Relaxed);
     }
 
-    // pub fn get_dir_ix() {
-    //     let mut dir_id = self.dir_id.write().unwrap();
-    //     if dir_id.is_none() || dir_id.unwrap() != new_id {
-    //      return ;
-    //     }
-    // }
-
     pub fn get_selected_file_path(&self) -> Option<String> {
-        let file_id = self.file_id.read().unwrap();
-        let dir_id = self.dir_id.read().unwrap();
+        let file_id = self.file_id.load(Ordering::Relaxed);
+        let dir_id = self.dir_id.load(Ordering::Relaxed);
 
-        if dir_id.is_none() || file_id.is_none() {
+        if dir_id < 0 || file_id < 0 {
             return None;
         }
 
-        let dir_id = (*dir_id).unwrap();
-        let file_id = (*file_id).unwrap();
+        let dir_id = dir_id as usize;
+        let file_id = file_id as usize;
 
-        let lenf = self.lens.read().unwrap();
+        let lenf = self.lens.lock();
         let ff = lenf.get_file_entry(dir_id, file_id);
 
         if let Some(file) = ff {
@@ -141,10 +122,6 @@ impl FileTable {
             None
         }
     }
-
-    // pub fn change_rows(&mut self, new_count: u32) {
-    //     self.wid.set_rows(new_count);
-    // }
 }
 
 use std::ops::{Deref, DerefMut};

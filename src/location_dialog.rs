@@ -2,7 +2,8 @@ use fltk::*;
 use fltk::{button::*, input::*, window::*};
 use serious_organizer_lib::lens::Lens;
 // use serious_organizer_lib::lens
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 use crate::location_table;
 
@@ -45,16 +46,16 @@ impl Location {
 }
 
 pub struct LocationDialog {
-    lens: Arc<RwLock<Lens>>,
-    location: Arc<RwLock<Location>>,
+    lens: Arc<Mutex<Lens>>,
+    location: Arc<Mutex<Location>>,
     selected_location: Arc<Mutex<Option<usize>>>,
 }
 
 impl LocationDialog {
-    pub fn new(lens: Arc<RwLock<Lens>>) -> Self {
+    pub fn new(lens: Arc<Mutex<Lens>>) -> Self {
         LocationDialog {
             lens,
-            location: Arc::new(RwLock::new(Location {
+            location: Arc::new(Mutex::new(Location {
                 name: None,
                 path: None,
             })),
@@ -79,9 +80,9 @@ impl LocationDialog {
             480,
             390,
             vec!["Name".to_string(), "Path".to_string()],
-            self.lens.read().unwrap().get_locations().len() as u32,
+            self.lens.lock().get_locations().len() as u32,
             Box::new(move |row, col| {
-                let l = lens_c.read().unwrap();
+                let l = lens_c.lock();
                 let loc_list = l.get_locations();
                 if loc_list.len() >= row as usize {
                     let ref loc = loc_list[row as usize];
@@ -103,9 +104,9 @@ impl LocationDialog {
         let lens_c = self.lens.clone();
         let mut table_c = location_table.clone();
         but_save.set_callback(Box::new(move || {
-            let loc = location_c.read().unwrap();
+            let loc = location_c.lock();
             if let Some((name, path)) = loc.values() {
-                let mut lens = lens_c.write().unwrap();
+                let mut lens = lens_c.lock();
                 lens.add_location(&name, &path);
 
                 let len = lens.get_locations().len();
@@ -120,9 +121,9 @@ impl LocationDialog {
         let select_c = self.selected_location.clone();
         let mut table_c = location_table.clone();
         but_delete.set_callback(Box::new(move || {
-            let select = *select_c.lock().unwrap();
+            let select = *select_c.lock();
             if let Some(loc_ix) = select {
-                let mut lens = lens_c.write().unwrap();
+                let mut lens = lens_c.lock();
 
                 let locations = lens.get_locations();
                 let ref loc = locations[loc_ix as usize];
@@ -144,7 +145,7 @@ impl LocationDialog {
         let mut but_c = but_save.clone();
         input_name.set_callback(Box::new(move || {
             let name = input_c.value();
-            let mut loc = location_c.write().unwrap();
+            let mut loc = location_c.lock();
             loc.set_name(&name);
 
             if loc.valid() {
@@ -161,7 +162,7 @@ impl LocationDialog {
         let mut but_c = but_save.clone();
         input_path.set_callback(Box::new(move || {
             let path = input_c.value();
-            let mut loc = location_c.write().unwrap();
+            let mut loc = location_c.lock();
             loc.set_path(&path);
 
             if loc.valid() {
@@ -184,10 +185,10 @@ impl LocationDialog {
             table_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
             println!("Select location!, {} {}", rt, rb);
             if rt >= 0 {
-                *select_c.lock().unwrap() = Some(rt as usize);
+                *select_c.lock() = Some(rt as usize);
                 but_c.activate();
             } else {
-                *select_c.lock().unwrap() = None;
+                *select_c.lock() = None;
                 but_c.deactivate();
             }
         }));

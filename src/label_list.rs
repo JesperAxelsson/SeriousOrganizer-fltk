@@ -1,4 +1,5 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 use fltk::table::*;
 use fltk::*;
@@ -11,13 +12,13 @@ use crate::table_utils::{draw_data, draw_header};
 #[derive(Clone)]
 pub struct LabelList {
     pub wid: TableRow,
-    lens: Arc<RwLock<Lens>>,
+    lens: Arc<Mutex<Lens>>,
 }
 
 // use std::rc::Rc;
 
 impl LabelList {
-    pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<RwLock<Lens>>) -> LabelList {
+    pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> LabelList {
         let headers = vec!["Name".to_string(), "State".to_string()];
         let mut table = LabelList {
             wid: TableRow::new(x, y, w, h, ""),
@@ -35,8 +36,6 @@ impl LabelList {
         table.wid.end();
         table.wid.set_rows(0);
 
-        let mut table_c = table.wid.clone();
-
         let lens_c = table.lens.clone();
  
         table
@@ -47,7 +46,7 @@ impl LabelList {
                 // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
                 table::TableContext::Cell => {
                         let selected = false; //table_c.row_selected(row);
-                        let l = lens_c.read().unwrap();
+                        let l = lens_c.lock();
                         let label_lst= l.get_labels();
                         let ref lbl = label_lst[row as usize];
                         

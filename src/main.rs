@@ -1,4 +1,5 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use parking_lot::Mutex;
 
 use fltk::*;
 use fltk::{app::*, button::*, input::*};
@@ -23,7 +24,7 @@ use file_table::FileTable;
 
 fn main() {
     println!("Starting");
-    let lens = Arc::new(RwLock::new(Lens::new()));
+    let lens = Arc::new(Mutex::new(Lens::new()));
 
     let w_size: i32 = 715;
     let h_size: i32 = 800;
@@ -63,9 +64,9 @@ fn main() {
         w_size - 180,
         390,
         vec!["Name".to_string(), "Path".to_string(), "Size".to_string()],
-        lens.read().unwrap().get_dir_count() as u32,
+        lens.lock().get_dir_count() as u32,
         Box::new(move |row, col| {
-            let l = lens_c.read().unwrap();
+            let l = lens_c.lock();
             let dir = l.get_dir_entry(row as usize).unwrap();
             match col {
                 0 => (dir.name.to_string(), Align::Left),
@@ -100,7 +101,7 @@ fn main() {
     let lens_c = lens.clone();
 
     but_reload.set_callback(Box::new(move || {
-        let mut lens = lens_c.write().unwrap();
+        let mut lens = lens_c.lock();
         println!("Start update data");
 
         let paths = lens
@@ -145,8 +146,9 @@ fn main() {
         let dir_count;
 
         {
-            lens_c.write().unwrap().update_search_text(&input_c.value());
-            dir_count = lens_c.read().unwrap().get_dir_count();
+            let mut lens = lens_c.lock();
+            lens.update_search_text(&input_c.value());
+            dir_count = lens.get_dir_count();
         }
         dir_tbl_c.set_rows(dir_count as u32);
         println!("Banan editing {} found: {}", input_c.value(), dir_count);
