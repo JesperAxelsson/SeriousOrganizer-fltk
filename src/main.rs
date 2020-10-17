@@ -8,35 +8,82 @@ use open;
 use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
 
-mod counter;
+// mod counter;
+// mod layout;
+
 mod entry_table;
 mod file_table;
 mod location_dialog;
 mod location_table;
 mod table_utils;
-mod layout;
 
-use counter::Counter;
 use entry_table::EntryTable;
 use file_table::FileTable;
+ 
 
 fn main() {
     println!("Starting");
     let lens = Arc::new(RwLock::new(Lens::new()));
- 
-    let mut h_count = Counter::new();
 
+    let w_size: i32 = 715;
+    let h_size: i32 = 800;
+ 
     let mut app = App::default();
     app.set_scheme(app::AppScheme::Gtk);
-    let mut wind = window::Window::new(100, 100, 800, 715, "Table");
+
+    let mut wind = window::Window::new(100, 100, h_size, w_size, "Table");
+    wind.make_resizable(true);
 
     println!("Setup app widgets");
-    let input_h = h_count.get_next(5, 30);
-    let mut input = Input::new(60, input_h, 200, 25, "Search");
+    let mut hpack = group::Pack::new(5, 5, h_size - 10, w_size - 10, "");
+
+    let mut top_pack = group::Pack::new(5, 5, h_size, 25, "");
+    let _spacer =  frame::Frame::default().with_size(45, 25);
+
+    let mut input = Input::new(0, 0, 200, 25, "Search");
+    let mut but_reload = Button::new(0, 0, 60, 25, "Reload");
+    let mut but = Button::new(0, 0, 80, 25, "Locations");
+
+    top_pack.end();
+    top_pack.set_spacing(10);
+    top_pack.set_type(group::PackType::Horizontal);
+
+    // Setup dir table
+
+    let mut table_group = group::Pack::new(0, 0, h_size, w_size, "");
+
+    let lens_c = lens.clone();
+    let mut dir_tbl = EntryTable::new(
+        5,
+        5,
+        w_size,
+        390,
+        vec!["Name".to_string(), "Path".to_string(), "Size".to_string()],
+        lens.read().unwrap().get_dir_count() as u32,
+        Box::new(move |row, col| {
+            let l = lens_c.read().unwrap();
+            let dir = l.get_dir_entry(row as usize).unwrap();
+            match col {
+                0 => (dir.name.to_string(), Align::Left),
+                1 => (dir.path.to_string(), Align::Left),
+                2 => (dir.size.to_string(), Align::Right),
+                _ => ("".to_string(), Align::Center),
+            }
+        }),
+    );
+    let mut file_tbl = FileTable::new(5, 5, w_size, 290, lens.clone());
+
+    table_group.resizable(&mut dir_tbl.wid);
+    table_group.resizable(&mut file_tbl.wid);
+
+    table_group.end();
+    table_group.set_spacing(10);
+    table_group.set_type(group::PackType::Vertical);
+
+    hpack.resizable(&mut table_group);
 
     let lens_c = lens.clone();
 
-    let mut but_reload = Button::new(280, input_h, 60, 25, "Reload!");
     but_reload.set_callback(Box::new(move || {
         let mut lens = lens_c.write().unwrap();
         println!("Start update data");
@@ -54,37 +101,13 @@ fn main() {
 
     let lens_c = lens.clone();
 
-    let mut but = Button::new(350, input_h, 80, 25, "Click me!");
     but.set_callback(Box::new(move || {
         println!("Hello World!");
         let dialog = location_dialog::LocationDialog::new(lens_c.clone());
         dialog.show();
     }));
 
-    // Setup dir table
-    let lens_c = lens.clone();
-
-    let mut dir_tbl = EntryTable::new(
-        5,
-        h_count.get_next(5, 390),
-        790,
-        390,
-        vec!["Name".to_string(), "Path".to_string(), "Size".to_string()],
-        lens.read().unwrap().get_dir_count() as u32,
-        Box::new(move |row, col| {
-            let l = lens_c.read().unwrap();
-            let dir = l.get_dir_entry(row as usize).unwrap();
-            match col {
-                0 => (dir.name.to_string(), Align::Left),
-                1 => (dir.path.to_string(), Align::Left),
-                2 => (dir.size.to_string(), Align::Right),
-                _ => ("".to_string(), Align::Center),
-            }
-        }),
-    );
-
     // Setup file table
-    let mut file_tbl = FileTable::new(5, h_count.get_next(5, 290), 790, 290, lens.clone());
     let file_tbl_c = file_tbl.clone();
     file_tbl.handle(Box::new(move |evt: Event| {
         if evt == Event::Push {
@@ -143,6 +166,10 @@ fn main() {
 
         file_tbl_c.set_file_ix(rt as usize);
     }));
+
+    hpack.end();
+    hpack.set_spacing(10);
+    hpack.set_type(group::PackType::Vertical);
 
     wind.end();
     wind.show();

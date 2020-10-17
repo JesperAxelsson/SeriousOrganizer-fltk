@@ -1,22 +1,21 @@
 #![allow(unused_variables, dead_code, unused_imports)]
 
-
 #[derive(Copy, Clone)]
-pub enum Layout {
+pub enum Layout<T: Eq + Copy> {
     Fixed {
-        id: usize,
+        id: T,
         width: usize,
     },
     Auto {
-        id: usize,
+        id: T,
         ratio: Option<usize>,
         min_width: usize,
         max_width: usize,
     },
 }
 
-impl Layout {
-    fn get_id(&self) -> usize {
+impl<T: Eq + Copy> Layout<T> {
+    fn get_id(&self) -> T {
         match *self {
             Layout::Fixed { id, .. } => id,
             Layout::Auto { id, .. } => id,
@@ -46,43 +45,42 @@ impl Layout {
     }
 }
 
-pub struct Size {
-    pub id: usize,
+pub struct Size<T: Eq + Copy> {
+    pub id: T,
     pub width: usize,
-    // pub pos: usize,
+    pub pos: usize,
 }
 
-impl Size {
-    pub fn new(id: usize, width: usize) -> Self {
-        Size { id, width }
+impl<T: Eq + Copy> Size<T> {
+    pub fn new(id: T, width: usize) -> Self {
+        Size { id, width, pos: 0 }
     }
 }
 
-pub fn size(width: usize, layout: &Vec<Layout>) -> Vec<Size> {
+pub fn size<T: Eq + Copy>(width: usize, layout: &Vec<Layout<T>>) -> Vec<Size<T>> {
     use std::cmp;
-    use std::collections::HashSet;
 
     // Check for unique ids
-    let mut id_set = HashSet::new();
+    let mut id_set = Vec::new();
     for l in layout.iter() {
         if id_set.contains(&l.get_id()) {
             panic!("Layout id's have to be unique!");
         }
 
-        id_set.insert(l.get_id());
+        id_set.push(l.get_id());
     }
 
-    let fixed: Vec<Layout> = layout.iter().filter(|e| e.is_fixed()).copied().collect();
-    let mut autos_vec: Vec<Layout> = layout.iter().filter(|e| e.is_auto()).copied().collect();
+    let fixed: Vec<Layout<T>> = layout.iter().filter(|e| e.is_fixed()).copied().collect();
+    let mut autos_vec: Vec<Layout<T>> = layout.iter().filter(|e| e.is_auto()).copied().collect();
     let fixed_width: usize = fixed.iter().map(|e| e.width().unwrap_or(0)).sum();
 
     let mut rem_width;
     let mut got_new = true;
 
-    let mut fixed_autos: Vec<Layout> = Vec::new();
-    let mut size_vec: Vec<Size> = Vec::new();
+    let mut fixed_autos: Vec<Layout<T>> = Vec::new();
+    let mut size_vec: Vec<Size<T>> = Vec::new();
 
-    println!("Start loop of doom");
+    println!("Start loop of doom. Size {}", width);
     while got_new && autos_vec.len() > 0 {
         let fixed_auto_width: usize = size_vec.iter().map(|e| e.width).sum();
 
@@ -140,15 +138,8 @@ pub fn size(width: usize, layout: &Vec<Layout>) -> Vec<Size> {
         1
     };
 
-    // let auto_share = if autos_vec.len() > 0 {
-    //     rem_width / autos_vec.len()
-    // } else {
-    //     1
-    // };
-
     for l in layout {
         if size_vec.iter().any(|e| e.id == l.get_id()) {
-            println!("Skipping {}", l.get_id());
             continue;
         }
 
@@ -172,6 +163,7 @@ pub fn size(width: usize, layout: &Vec<Layout>) -> Vec<Size> {
 
     println!("Lay {} siz {}", layout.len(), size_vec.len());
 
+    // Sort in layout order
     for (i, x) in layout.iter().enumerate() {
         if x.get_id() != size_vec[i].id {
             let six = size_vec
@@ -180,6 +172,14 @@ pub fn size(width: usize, layout: &Vec<Layout>) -> Vec<Size> {
                 .expect("Failed to get position if id");
             size_vec.swap(i, six);
         }
+    }
+
+    // Calc pos
+    let mut pos = 0;
+    for s in size_vec.iter_mut() {
+        s.pos = pos;
+        println!("Pos: {}", pos);
+        pos += s.width;
     }
 
     return size_vec;
@@ -208,8 +208,8 @@ mod tests {
         assert!(size_vec[0].width == 10);
         assert!(size_vec[1].width == 10);
 
-        // assert!(size_vec[0].pos == 0);
-        // assert!(size_vec[1].pos == 10);
+        assert!(size_vec[0].pos == 0);
+        assert!(size_vec[1].pos == 10);
     }
 
     #[test]
@@ -224,8 +224,8 @@ mod tests {
         assert!(size_vec[0].width == 10);
         assert!(size_vec[1].width == 10);
 
-        // assert!(size_vec[0].pos == 0);
-        // assert!(size_vec[1].pos == 10);
+        assert!(size_vec[0].pos == 0);
+        assert!(size_vec[1].pos == 10);
     }
 
     #[test]
@@ -247,9 +247,9 @@ mod tests {
         assert!(size_vec[1].width == 10);
         assert!(size_vec[2].width == 10);
 
-        // assert!(size_vec[0].pos == 0);
-        // assert!(size_vec[1].pos == 10);
-        // assert!(size_vec[2].pos == 20);
+        assert!(size_vec[0].pos == 0);
+        assert!(size_vec[1].pos == 10);
+        assert!(size_vec[2].pos == 20);
     }
 
     #[test]
@@ -278,10 +278,10 @@ mod tests {
         assert!(size_vec[2].width == 5);
         assert!(size_vec[3].width == 10);
 
-        // assert!(size_vec[0].pos == 0);
-        // assert!(size_vec[1].pos == 10);
-        // assert!(size_vec[2].pos == 15);
-        // assert!(size_vec[3].pos == 20);
+        assert!(size_vec[0].pos == 0);
+        assert!(size_vec[1].pos == 10);
+        assert!(size_vec[2].pos == 15);
+        assert!(size_vec[3].pos == 20);
     }
 
     #[test]
@@ -317,11 +317,11 @@ mod tests {
         assert!(size_vec[3].width == 10);
         assert!(size_vec[4].width == 10);
 
-        // assert!(size_vec[0].pos == 0);
-        // assert!(size_vec[1].pos == 10);
-        // assert!(size_vec[2].pos == 15);
-        // assert!(size_vec[3].pos == 25);
-        // assert!(size_vec[4].pos == 35);
+        assert!(size_vec[0].pos == 0);
+        assert!(size_vec[1].pos == 10);
+        assert!(size_vec[2].pos == 15);
+        assert!(size_vec[3].pos == 25);
+        assert!(size_vec[4].pos == 35);
     }
 
     #[test]
