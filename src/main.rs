@@ -13,13 +13,13 @@ use serious_organizer_lib::lens::Lens;
 
 mod entry_table;
 mod file_table;
+mod label_list;
 mod location_dialog;
 mod location_table;
 mod table_utils;
 
 use entry_table::EntryTable;
 use file_table::FileTable;
- 
 
 fn main() {
     println!("Starting");
@@ -27,18 +27,18 @@ fn main() {
 
     let w_size: i32 = 715;
     let h_size: i32 = 800;
- 
+
     let mut app = App::default();
     app.set_scheme(app::AppScheme::Gtk);
 
-    let mut wind = window::Window::new(100, 100, h_size, w_size, "Table");
+    let mut wind = window::Window::new(100, 100, w_size, h_size, "Table");
     wind.make_resizable(true);
 
     println!("Setup app widgets");
-    let mut hpack = group::Pack::new(5, 5, h_size - 10, w_size - 10, "");
+    let mut hpack = group::Pack::new(5, 5, w_size - 10, h_size - 10, "");
 
-    let mut top_pack = group::Pack::new(5, 5, h_size, 25, "");
-    let _spacer =  frame::Frame::default().with_size(45, 25);
+    let mut top_pack = group::Pack::new(5, 5, w_size, 25, "");
+    let _spacer = frame::Frame::default().with_size(45, 25);
 
     let mut input = Input::new(0, 0, 200, 25, "Search");
     let mut but_reload = Button::new(0, 0, 60, 25, "Reload");
@@ -50,13 +50,17 @@ fn main() {
 
     // Setup dir table
 
-    let mut table_group = group::Pack::new(0, 0, h_size, w_size, "");
+    let mut table_row = group::Pack::new(0, 0, w_size, h_size, "");
+
+    let mut table_col = group::Pack::new(0, 0, w_size - 180, h_size, "");
 
     let lens_c = lens.clone();
+    let mut _spacer = frame::Frame::default().with_size(  1, 1);
+
     let mut dir_tbl = EntryTable::new(
         5,
         5,
-        w_size,
+        w_size - 180,
         390,
         vec!["Name".to_string(), "Path".to_string(), "Size".to_string()],
         lens.read().unwrap().get_dir_count() as u32,
@@ -71,16 +75,27 @@ fn main() {
             }
         }),
     );
-    let mut file_tbl = FileTable::new(5, 5, w_size, 290, lens.clone());
+  
+    let mut _spacer = frame::Frame::default().with_size(  1, 1);
 
-    table_group.resizable(&mut dir_tbl.wid);
-    table_group.resizable(&mut file_tbl.wid);
+    let mut file_tbl = FileTable::new(5, 5, w_size - 180, 260, lens.clone());
 
-    table_group.end();
-    table_group.set_spacing(10);
-    table_group.set_type(group::PackType::Vertical);
+    table_col.resizable(&mut dir_tbl.wid);
+    table_col.resizable(&mut file_tbl.wid);
+    // table_col.resizable(&mut _spacer);
 
-    hpack.resizable(&mut table_group);
+    table_col.end();
+    table_col.set_spacing(5);
+    table_col.set_type(group::PackType::Vertical);
+
+    let _label_lst = label_list::LabelList::new(5, 5, 165, h_size, lens.clone());
+
+    table_row.resizable(&mut table_col);
+    table_row.end();
+    table_row.set_spacing(10);
+    table_row.set_type(group::PackType::Horizontal);
+
+    hpack.resizable(&mut table_row);
 
     let lens_c = lens.clone();
 
