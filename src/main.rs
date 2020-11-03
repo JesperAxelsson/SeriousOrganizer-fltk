@@ -63,18 +63,7 @@ fn main() {
         5,
         w_size - 180,
         390,
-        vec!["Name".to_string(), "Path".to_string(), "Size".to_string()],
-        lens.lock().get_dir_count() as u32,
-        Box::new(move |row, col| {
-            let l = lens_c.lock();
-            let dir = l.get_dir_entry(row as usize).unwrap();
-            match col {
-                0 => (dir.name.to_string(), Align::Left),
-                1 => (dir.path.to_string(), Align::Left),
-                2 => (dir.size.to_string(), Align::Right),
-                _ => ("".to_string(), Align::Center),
-            }
-        }),
+        lens_c
     );
   
     let mut _spacer = frame::Frame::default().with_size(  1, 1);
