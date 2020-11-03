@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fltk = { version = "0.9.6", features = ["fltk-bundled"] }
+fltk = { version = "0.10.2", features = ["fltk-bundled"] }
 serious_organizer_lib = {git = "https://github.com/JesperAxelsson/SeriousOrganizerLib.git" }
 open = "1.4.0"
 

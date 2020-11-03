@@ -1,6 +1,6 @@
-use std::sync::atomic::{AtomicIsize, Ordering};
-use std::sync::{Arc};
 use parking_lot::Mutex;
+use std::sync::atomic::{AtomicIsize, Ordering};
+use std::sync::Arc;
 
 use fltk::table::*;
 use fltk::*;
@@ -43,7 +43,7 @@ impl FileTable {
         let dir_id_c = table.dir_id.clone();
         table
             .wid
-            .draw_cell(Box::new(move |ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
@@ -73,7 +73,7 @@ impl FileTable {
                     }
                 }
                 _ => (),
-            }));
+            });
         table
     }
 

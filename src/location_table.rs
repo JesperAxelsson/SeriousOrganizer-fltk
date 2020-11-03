@@ -1,10 +1,10 @@
+use fltk::table::*;
 use fltk::*;
-use fltk::{table::*};
 
 use crate::table_utils::{draw_data, draw_header};
 
 pub struct LocationTable {
-   pub wid: TableRow,
+    pub wid: TableRow,
 }
 
 impl LocationTable {
@@ -32,11 +32,8 @@ impl LocationTable {
         table.wid.end();
         table.wid.set_rows(row_count);
 
-        let mut table_c = table.wid.clone();
-
-        table
-            .wid
-            .draw_cell(Box::new(move |ctx, row, col, x, y, w, h| match ctx {
+        table.wid.draw_cell2(
+            move |table_c: &mut TableRow, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
@@ -45,16 +42,16 @@ impl LocationTable {
                     draw_data(&data, x, y, w, h, table_c.row_selected(row), align)
                 }
                 _ => (),
-            }));
+            },
+        );
+
         table
     }
- 
 
     // pub fn change_rows(&mut self, new_count: u32) {
     //     self.wid.set_rows(new_count);
     // }
 }
-
 
 use std::ops::{Deref, DerefMut};
 

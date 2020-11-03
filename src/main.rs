@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 
 use fltk::*;
 use fltk::{app::*, button::*, input::*};
@@ -56,17 +56,11 @@ fn main() {
     let mut table_col = group::Pack::new(0, 0, w_size - 180, h_size, "");
 
     let lens_c = lens.clone();
-    let mut _spacer = frame::Frame::default().with_size(  1, 1);
+    let mut _spacer = frame::Frame::default().with_size(1, 1);
 
-    let mut dir_tbl = EntryTable::new(
-        5,
-        5,
-        w_size - 180,
-        390,
-        lens_c
-    );
-  
-    let mut _spacer = frame::Frame::default().with_size(  1, 1);
+    let mut dir_tbl = EntryTable::new(5, 5, w_size - 180, 390, lens_c);
+
+    let mut _spacer = frame::Frame::default().with_size(1, 1);
 
     let mut file_tbl = FileTable::new(5, 5, w_size - 180, 260, lens.clone());
 
@@ -89,7 +83,7 @@ fn main() {
 
     let lens_c = lens.clone();
 
-    but_reload.set_callback(Box::new(move || {
+    but_reload.set_callback(move || {
         let mut lens = lens_c.lock();
         println!("Start update data");
 
@@ -102,19 +96,19 @@ fn main() {
 
         lens.update_data(&mut dir_s);
         println!("Done update data");
-    }));
+    });
 
     let lens_c = lens.clone();
 
-    but.set_callback(Box::new(move || {
+    but.set_callback(move || {
         println!("Hello World!");
         let dialog = location_dialog::LocationDialog::new(lens_c.clone());
         dialog.show();
-    }));
+    });
 
     // Setup file table
     let file_tbl_c = file_tbl.clone();
-    file_tbl.handle(Box::new(move |evt: Event| {
+    file_tbl.handle(move |evt: Event| {
         if evt == Event::Push {
             let path = file_tbl_c.get_selected_file_path();
             println!("Event: {:?}, {:?}, {:?}", evt, app::event_clicks(), path);
@@ -123,17 +117,15 @@ fn main() {
             }
         }
         false
-    }));
+    });
 
     // Setup search input
 
     input.set_trigger(CallbackTrigger::Changed);
-    let input_c = input.clone();
     let lens_c = lens.clone();
     let mut dir_tbl_c = dir_tbl.wid.clone();
-    input.set_callback(Box::new(move || {
+    input.set_callback2(move |input_c: &mut Input| {
         let dir_count;
-
         {
             let mut lens = lens_c.lock();
             lens.update_search_text(&input_c.value());
@@ -141,12 +133,12 @@ fn main() {
         }
         dir_tbl_c.set_rows(dir_count as u32);
         println!("Banan editing {} found: {}", input_c.value(), dir_count);
-    }));
+    });
 
     let dir_tbl_c = dir_tbl.wid.clone();
     let mut file_tbl_c = file_tbl.clone();
     dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
-    dir_tbl.wid.set_callback(Box::new(move || {
+    dir_tbl.wid.set_callback(move || {
         let mut cl = 0;
         let mut rt = 0;
         let mut rb = 0;
@@ -157,12 +149,11 @@ fn main() {
         if rt >= 0 {
             file_tbl_c.set_dir_ix(rt as usize);
         }
-    }));
+    });
 
     let mut file_tbl_c = file_tbl.clone();
-    // let file_tbl_c = file_tbl.clone();
     file_tbl.set_trigger(CallbackTrigger::Changed);
-    file_tbl.set_callback(Box::new(move || {
+    file_tbl.set_callback(move || {
         let mut cl = 0;
         let mut rt = 0;
         let mut rb = 0;
@@ -171,7 +162,7 @@ fn main() {
         println!("Files changed!, {} {}", rt, rb);
 
         file_tbl_c.set_file_ix(rt as usize);
-    }));
+    });
 
     hpack.end();
     hpack.set_spacing(10);

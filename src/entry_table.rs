@@ -38,7 +38,7 @@ impl EntryTable {
 
         table
             .wid
-            .draw_cell(Box::new(move |ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 table::TableContext::Cell => {
@@ -55,7 +55,7 @@ impl EntryTable {
                     draw_data(&data, x, y, w, h, table_c.row_selected(row), align)
                 }
                 _ => (),
-            }));
+            });
         table
     }
 

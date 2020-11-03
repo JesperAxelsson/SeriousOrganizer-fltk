@@ -1,12 +1,11 @@
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 
 use fltk::table::*;
 use fltk::*;
 
-use serious_organizer_lib::lens::Lens;
 use serious_organizer_lib::lens::LabelState;
-
+use serious_organizer_lib::lens::Lens;
 
 use crate::table_utils::{draw_data, draw_header};
 #[derive(Clone)]
@@ -37,40 +36,36 @@ impl LabelList {
         table.wid.set_rows(0);
 
         let lens_c = table.lens.clone();
- 
+
         table
             .wid
-            .draw_cell(Box::new(move |ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
                 table::TableContext::Cell => {
-                        let selected = false; //table_c.row_selected(row);
-                        let l = lens_c.lock();
-                        let label_lst= l.get_labels();
-                        let ref lbl = label_lst[row as usize];
-                        
+                    let selected = false; //table_c.row_selected(row);
+                    let l = lens_c.lock();
+                    let label_lst = l.get_labels();
+                    let ref lbl = label_lst[row as usize];
 
-                        let lbl_text = match lbl.state {
-                            LabelState::Unset=> "U",
-                            LabelState::Include=> "I",
-                            LabelState::Exclude=> "E",
-                        };
-                        
-                        match col {
-                            0 => draw_data(&lbl.name, x, y, w, h, selected, Align::Left),
-                            1 => draw_data(lbl_text, x, y, w, h, selected, Align::Right),
-                            
-                            _ => (),
-                        };
-                
+                    let lbl_text = match lbl.state {
+                        LabelState::Unset => "U",
+                        LabelState::Include => "I",
+                        LabelState::Exclude => "E",
+                    };
+
+                    match col {
+                        0 => draw_data(&lbl.name, x, y, w, h, selected, Align::Left),
+                        1 => draw_data(lbl_text, x, y, w, h, selected, Align::Right),
+
+                        _ => (),
+                    };
                 }
                 _ => (),
-            }));
+            });
         table
     }
-
-   
 }
 
 use std::ops::{Deref, DerefMut};
