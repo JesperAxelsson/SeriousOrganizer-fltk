@@ -92,13 +92,13 @@ impl FileTable {
                 let len = lens.get_file_count(new_id).unwrap();
                 self.wid.set_rows(len as u32);
                 self.wid.redraw();
-                println!("Redrawing, len {}", len);
+                // println!("Redrawing, len {}", len);
             }
         }
     }
 
     pub fn set_file_ix(&mut self, new_id: usize) {
-        println!("Got new file id: {}", new_id);
+        // println!("Got new file id: {}", new_id);
         self.file_id.store(new_id as isize, Ordering::Relaxed);
     }
 

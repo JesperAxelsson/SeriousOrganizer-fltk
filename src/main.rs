@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 
 use fltk::*;
-use fltk::{app::*, button::*, input::*};
+use fltk::{app::*, button::*, input::*, menu::*};
 
 use open;
 
@@ -72,12 +72,14 @@ fn main() {
     table_col.set_spacing(5);
     table_col.set_type(group::PackType::Vertical);
 
+
     let _label_lst = label_list::LabelList::new(5, 5, 165, h_size, lens.clone());
 
     table_row.resizable(&mut table_col);
     table_row.end();
     table_row.set_spacing(10);
     table_row.set_type(group::PackType::Horizontal);
+    table_row.auto_layout();
 
     hpack.resizable(&mut table_row);
 
@@ -108,12 +110,36 @@ fn main() {
 
     // Setup file table
     let file_tbl_c = file_tbl.clone();
+    let mut last_click_started = false;
     file_tbl.handle(move |evt: Event| {
-        if evt == Event::Push {
+        let btn = app::event_button();
+        // Left click
+        if evt == Event::Push && btn == 1 {
+            if !app::event_clicks() {
+                last_click_started = false
+            }
+
             let path = file_tbl_c.get_selected_file_path();
-            println!("Event: {:?}, {:?}, {:?}", evt, app::event_clicks(), path);
-            if app::event_clicks() && path.is_some() {
+            if !last_click_started && app::event_clicks() && path.is_some() {
+                last_click_started = true;
                 open::that_in_background(path.unwrap());
+            }
+        }
+
+        // Right click
+        if evt == Event::Push && btn == 3 {
+            // println!("FL: {:?}, {:?}, {:?}", evt, app::event_clicks(), last_click_started);
+            let path = file_tbl_c.get_selected_file_path();
+            // println!("Event: {:?}, {:?}, {:?}", evt, app::event_clicks(), path);
+            if path.is_some() {
+                println!("Context menu!");
+
+                let v = vec!["1st val", "2nd val", "3rd val"];
+                let mut x = MenuItem::new(&v);
+                match x.popup(app::event_x(), app::event_y()) {
+                    None => println!("No value was chosen!"),
+                    Some(val) => println!("{}", val.label().unwrap()),
+                }
             }
         }
         false
@@ -159,7 +185,7 @@ fn main() {
         let mut rb = 0;
         let mut cr = 0;
         file_tbl_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
-        println!("Files changed!, {} {}", rt, rb);
+        // println!("Files changed!, {} {}", rt, rb);
 
         file_tbl_c.set_file_ix(rt as usize);
     });
