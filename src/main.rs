@@ -1,8 +1,7 @@
 use parking_lot::Mutex;
 use std::sync::Arc;
 
-use fltk::*;
-use fltk::{app::*, button::*, input::*, menu::*};
+use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, window};
 
 use open;
 
@@ -12,6 +11,7 @@ use serious_organizer_lib::lens::Lens;
 // mod counter;
 // mod layout;
 
+mod add_label_dialog;
 mod entry_table;
 mod file_table;
 mod label_list;
@@ -32,7 +32,7 @@ fn main() {
     let mut app = App::default();
     app.set_scheme(app::AppScheme::Gtk);
 
-    let mut wind = window::Window::new(100, 100, w_size, h_size, "Table");
+    let mut wind = window::Window::new(100, 100, w_size, h_size, "Serious Organizer");
     wind.make_resizable(true);
 
     println!("Setup app widgets");
@@ -72,7 +72,6 @@ fn main() {
     table_col.set_spacing(5);
     table_col.set_type(group::PackType::Vertical);
 
-
     let _label_lst = label_list::LabelList::new(5, 5, 165, h_size, lens.clone());
 
     table_row.resizable(&mut table_col);
@@ -103,13 +102,14 @@ fn main() {
     let lens_c = lens.clone();
 
     but.set_callback(move || {
-        println!("Hello World!");
+        // println!("Hello World!");
         let dialog = location_dialog::LocationDialog::new(lens_c.clone());
         dialog.show();
     });
 
     // Setup file table
     let file_tbl_c = file_tbl.clone();
+    let lens_c = lens.clone();
     let mut last_click_started = false;
     file_tbl.handle(move |evt: Event| {
         let btn = app::event_button();
@@ -138,7 +138,13 @@ fn main() {
                 let mut x = MenuItem::new(&v);
                 match x.popup(app::event_x(), app::event_y()) {
                     None => println!("No value was chosen!"),
-                    Some(val) => println!("{}", val.label().unwrap()),
+                    Some(val) => {
+                        println!("{}", val.label().unwrap());
+                        if val.label().unwrap() == "1st val" {
+                            let dialog = add_label_dialog::AddLabelDialog::new(lens_c.clone());
+                            dialog.show();
+                        }
+                    }
                 }
             }
         }
