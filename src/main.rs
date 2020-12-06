@@ -1,5 +1,7 @@
+use log::LevelFilter;
 use parking_lot::Mutex;
-use std::sync::Arc;
+use simplelog::{CombinedLogger, Config, SimpleLogger};
+use std::{cell::RefCell, sync::Arc};
 
 use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, window};
 
@@ -7,6 +9,9 @@ use open;
 
 use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
+
+#[macro_use] 
+extern crate log;
 
 // mod counter;
 // mod layout;
@@ -24,6 +29,13 @@ use file_table::FileTable;
 
 fn main() {
     println!("Starting");
+    CombinedLogger::init(
+        vec![
+            SimpleLogger::new(LevelFilter::Info, Config::default()),
+            // WriteLogger::new(LevelFilter::Info, Config::default(), std::fs::File::create("serious_server.log").expect("Failed to init logger")),
+        ]
+    ).unwrap();
+
     let lens = Arc::new(Mutex::new(Lens::new()));
 
     let w_size: i32 = 715;
@@ -72,7 +84,16 @@ fn main() {
     table_col.set_spacing(5);
     table_col.set_type(group::PackType::Vertical);
 
-    let _label_lst = label_list::LabelList::new(5, 5, 165, h_size, lens.clone());
+    use ::std::rc::Rc;
+    let mut dir_tbl_c = dir_tbl.clone();
+    let _label_lst = label_list::LabelList::new(
+        5,
+        5,
+        165,
+        h_size,
+        lens.clone(),
+        Rc::new(RefCell::new(move || dir_tbl_c.update())),
+    );
 
     table_row.resizable(&mut table_col);
     table_row.end();
@@ -143,6 +164,69 @@ fn main() {
                         if val.label().unwrap() == "1st val" {
                             let dialog = add_label_dialog::AddLabelDialog::new(lens_c.clone());
                             dialog.show();
+                        }
+
+                        if val.label().unwrap() == "2st val" {
+                            // let lens = lens_c.lock();
+                            // lens.add_label
+                        }
+                    }
+                }
+            }
+        }
+        false
+    });
+
+    // Setup Entry table
+
+    let mut dir_tbl_c = dir_tbl.clone();
+    let lens_c = lens.clone();
+    dir_tbl.handle(move |evt: Event| {
+        let btn = app::event_button();
+
+        // Right click
+        if evt == Event::Push && btn == 3 {
+            let selection = dir_tbl_c.get_selected_index();
+
+            if selection.len() > 0 {
+                println!("Context menu!");
+
+                let v = vec!["1st val", "2nd val", "3rd val"];
+                let mut x = MenuItem::new(&v);
+                match x.popup(app::event_x(), app::event_y()) {
+                    None => println!("No value was chosen!"),
+                    Some(val) => {
+                        println!("{}", val.label().unwrap());
+                        if val.label().unwrap() == "1st val" {
+                            let dialog = add_label_dialog::AddLabelDialog::new(lens_c.clone());
+                            dialog.show();
+                        }
+
+                        if val.label().unwrap() == "2nd val" {
+                            let mut lens = lens_c.lock();
+                            let mut entries = Vec::new();
+
+                            for ix in selection.iter() {
+                                if let Some(id) = lens.convert_ix(*ix as usize) {
+                                    entries.push(id as u32);
+                                }
+                            }
+
+                            lens.add_entry_labels(entries, vec![1, 2])
+                        }
+
+                        if val.label().unwrap() == "3rd val" {
+                            let mut lens = lens_c.lock();
+                            let mut entries = Vec::new();
+
+                            for ix in selection.iter() {
+                                if let Some(e) = lens.get_dir_entry(*ix as usize) {
+                                    let id: i32 = e.id.into();
+                                    entries.push(id as u32);
+                                }
+                            }
+
+                            lens.remove_entry_labels(entries, vec![2])
                         }
                     }
                 }

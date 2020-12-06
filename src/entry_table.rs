@@ -8,6 +8,7 @@ use serious_organizer_lib::lens::Lens;
 
 use crate::table_utils::{draw_data, draw_header};
 
+#[derive(Clone)]
 pub struct EntryTable {
     pub wid: TableRow,
     lens: Arc<Mutex<Lens>>,
@@ -44,7 +45,9 @@ impl EntryTable {
                 table::TableContext::Cell => {
                     let (data, align) = {
                         let l = lens_c.lock();
-                        let dir = l.get_dir_entry(row as usize).unwrap();
+                        let dir = l
+                            .get_dir_entry(row as usize)
+                            .expect("Failed to get dir entry");
                         match col {
                             0 => (dir.name.to_string(), Align::Left),
                             1 => (dir.path.to_string(), Align::Left),
@@ -62,4 +65,37 @@ impl EntryTable {
     // pub fn change_rows(&mut self, new_count: u32) {
     //     self.wid.set_rows(new_count);
     // }
+
+    pub fn update(&mut self) {
+        let dir_count = { self.lens.lock().get_dir_count() as u32 };
+        self.set_rows(dir_count);
+        self.redraw();
+    }
+
+    pub fn get_selected_index(&mut self) -> Vec<u32> {
+        let mut selected = Vec::new();
+        // draw_data(&data, x, y, w, h, table_c.row_selected(row), align);
+        for ix in 0..self.rows() {
+            if self.row_selected(ix as i32) {
+                selected.push(ix as u32);
+            }
+        }
+        selected
+    }
+}
+
+use std::ops::{Deref, DerefMut};
+
+impl Deref for EntryTable {
+    type Target = TableRow;
+
+    fn deref(&self) -> &Self::Target {
+        &self.wid
+    }
+}
+
+impl DerefMut for EntryTable {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.wid
+    }
 }

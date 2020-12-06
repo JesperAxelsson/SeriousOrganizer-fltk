@@ -121,7 +121,7 @@ impl FileTable {
         } else {
             None
         }
-    }
+    }    
 }
 
 use std::ops::{Deref, DerefMut};

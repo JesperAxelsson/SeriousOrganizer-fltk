@@ -8,7 +8,12 @@ edition = "2018"
 
 [dependencies]
 fltk = { version = "0.11", features = ["fltk-bundled"] }
-serious_organizer_lib = {git = "https://github.com/JesperAxelsson/SeriousOrganizerLib.git" }
+# serious_organizer_lib = {git = "https://github.com/JesperAxelsson/SeriousOrganizerLib.git" }
+serious_organizer_lib = { path = "../SeriousOrganizerLib" }
 open = "1.4.0"
 
 parking_lot = "0.11.0"
+time = "0.2.22"
+
+log = "0.4.11"
+simplelog = "0.7.4"
