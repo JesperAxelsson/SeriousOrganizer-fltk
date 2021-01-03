@@ -43,19 +43,19 @@ impl EntryTable {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 table::TableContext::Cell => {
-                    let (data, align) = {
-                        let l = lens_c.lock();
-                        let dir = l
-                            .get_dir_entry(row as usize)
-                            .expect("Failed to get dir entry");
-                        match col {
-                            0 => (dir.name.to_string(), Align::Left),
-                            1 => (dir.path.to_string(), Align::Left),
-                            2 => (pretty_size(dir.size), Align::Right),
-                            _ => ("".to_string(), Align::Center),
-                        }
-                    };
-                    draw_data(&data, x, y, w, h, table_c.row_selected(row), align)
+                    let l = lens_c.lock();
+                    if let Some(dir) = l.get_dir_entry(row as usize) {
+                        let (data, align) = {
+                            match col {
+                                0 => (dir.name.to_string(), Align::Left),
+                                1 => (dir.path.to_string(), Align::Left),
+                                2 => (pretty_size(dir.size), Align::Right),
+                                _ => ("".to_string(), Align::Center),
+                            }
+                        };
+
+                        draw_data(&data, x, y, w, h, table_c.row_selected(row), align)
+                    }
                 }
                 _ => (),
             });
