@@ -52,21 +52,23 @@ impl FileTable {
                     if dir_id >= 0 {
                         let selected = table_c.row_selected(row);
                         let l = lens_c.lock();
-                        let files = l.get_dir_files(dir_id as usize).unwrap();
-                        let file = &files[row as usize];
-                        match col {
-                            0 => draw_data(&file.name, x, y, w, h, selected, Align::Left),
-                            1 => draw_data(&file.path, x, y, w, h, selected, Align::Left),
-                            2 => draw_data(
-                                &format!("{}", file.size),
-                                x,
-                                y,
-                                w,
-                                h,
-                                selected,
-                                Align::Right,
-                            ),
-                            _ => (),
+                        let files = l.get_dir_files(dir_id as usize);
+                        if let Some(files) = files {
+                            let file = &files[row as usize];
+                            match col {
+                                0 => draw_data(&file.name, x, y, w, h, selected, Align::Left),
+                                1 => draw_data(&file.path, x, y, w, h, selected, Align::Left),
+                                2 => draw_data(
+                                    &format!("{}", file.size),
+                                    x,
+                                    y,
+                                    w,
+                                    h,
+                                    selected,
+                                    Align::Right,
+                                ),
+                                _ => (),
+                            }
                         };
                     } else {
                         ()
@@ -121,7 +123,7 @@ impl FileTable {
         } else {
             None
         }
-    }    
+    }
 }
 
 use std::ops::{Deref, DerefMut};

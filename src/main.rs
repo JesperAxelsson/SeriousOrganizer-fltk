@@ -10,7 +10,7 @@ use open;
 use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
 
-#[macro_use] 
+#[macro_use]
 extern crate log;
 
 // mod counter;
@@ -29,12 +29,11 @@ use file_table::FileTable;
 
 fn main() {
     println!("Starting");
-    CombinedLogger::init(
-        vec![
-            SimpleLogger::new(LevelFilter::Info, Config::default()),
-            // WriteLogger::new(LevelFilter::Info, Config::default(), std::fs::File::create("serious_server.log").expect("Failed to init logger")),
-        ]
-    ).unwrap();
+    CombinedLogger::init(vec![
+        SimpleLogger::new(LevelFilter::Info, Config::default()),
+        // WriteLogger::new(LevelFilter::Info, Config::default(), std::fs::File::create("serious_server.log").expect("Failed to init logger")),
+    ])
+    .unwrap();
 
     let lens = Arc::new(Mutex::new(Lens::new()));
 
@@ -86,7 +85,7 @@ fn main() {
 
     use ::std::rc::Rc;
     let mut dir_tbl_c = dir_tbl.clone();
-    let _label_lst = label_list::LabelList::new(
+    let label_list = label_list::LabelList::new(
         5,
         5,
         165,
@@ -130,6 +129,8 @@ fn main() {
 
     // Setup file table
     let file_tbl_c = file_tbl.clone();
+    let mut label_tbl_c = label_list.clone();
+    let label_update = Rc::new(RefCell::new(move || label_tbl_c.update()));
     let lens_c = lens.clone();
     let mut last_click_started = false;
     file_tbl.handle(move |evt: Event| {
@@ -162,7 +163,10 @@ fn main() {
                     Some(val) => {
                         println!("{}", val.label().unwrap());
                         if val.label().unwrap() == "1st val" {
-                            let dialog = add_label_dialog::AddLabelDialog::new(lens_c.clone());
+                            let dialog = add_label_dialog::AddLabelDialog::new(
+                                lens_c.clone(),
+                                label_update.clone(),
+                            );
                             dialog.show();
                         }
 
@@ -180,6 +184,8 @@ fn main() {
     // Setup Entry table
 
     let mut dir_tbl_c = dir_tbl.clone();
+    let mut label_tbl_c = label_list.clone();
+    let label_update = Rc::new(RefCell::new(move || label_tbl_c.update()));
     let lens_c = lens.clone();
     dir_tbl.handle(move |evt: Event| {
         let btn = app::event_button();
@@ -198,8 +204,12 @@ fn main() {
                     Some(val) => {
                         println!("{}", val.label().unwrap());
                         if val.label().unwrap() == "1st val" {
-                            let dialog = add_label_dialog::AddLabelDialog::new(lens_c.clone());
+                            let dialog = add_label_dialog::AddLabelDialog::new(
+                                lens_c.clone(),
+                                label_update.clone(),
+                            );
                             dialog.show();
+                            label_update.borrow_mut()();
                         }
 
                         if val.label().unwrap() == "2nd val" {
