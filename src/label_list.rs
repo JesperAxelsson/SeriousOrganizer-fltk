@@ -10,7 +10,7 @@ use serious_organizer_lib::lens::Lens;
 use time::Instant;
 
 use crate::table_utils::{draw_data, draw_header};
- 
+
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -30,7 +30,6 @@ impl LabelList {
         w: i32,
         h: i32,
         lens: Arc<Mutex<Lens>>,
-        // on_update: Box<dyn Fn() -> () >
         on_update: Rc<RefCell<dyn FnMut() -> ()>>,
     ) -> LabelList {
         let headers = vec!["Name".to_string(), "State".to_string()];
@@ -74,6 +73,8 @@ impl LabelList {
                     let l = lens_c.lock();
                     let label_lst = l.get_labels();
                     let ref lbl = label_lst[row as usize];
+
+                    println!("Draw label {}", lbl.name);
 
                     let lbl_text = match lbl.state {
                         LabelState::Unset => "U",
@@ -188,6 +189,12 @@ impl LabelList {
             }
         }
         false
+    }
+
+    pub fn update(&mut self) {
+        self.update_size();
+        self.redraw();
+        self.damage();
     }
 }
 

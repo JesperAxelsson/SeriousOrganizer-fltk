@@ -2,18 +2,20 @@ use fltk::{button::*, input::*, window::*};
 use serious_organizer_lib::lens::Lens;
 // use serious_organizer_lib::lens
 use parking_lot::Mutex;
-use std::sync::Arc;
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 pub struct AddLabelDialog {
     lens: Arc<Mutex<Lens>>,
     label: Arc<Mutex<Option<String>>>,
+    on_update: Rc<RefCell<dyn FnMut() -> ()>>,
 }
 
 impl AddLabelDialog {
-    pub fn new(lens: Arc<Mutex<Lens>>) -> Self {
+    pub fn new(lens: Arc<Mutex<Lens>>, on_update: Rc<RefCell<dyn FnMut() -> ()>>) -> Self {
         AddLabelDialog {
             lens,
             label: Arc::new(Mutex::new(None)),
+            on_update,
         }
     }
 
@@ -28,18 +30,22 @@ impl AddLabelDialog {
         // Button save callback
         let lens_c = self.lens.clone();
         let label_c = self.label.clone();
+        let on_update = self.on_update.clone();
         let mut dialog_c = dialog.clone();
         but_save.set_callback(move || {
             let lbl = label_c.lock();
             if let Some(ref name) = *lbl {
-                let mut lens = lens_c.lock();
-                lens.add_label(&name);
+                {
+                    let mut lens = lens_c.lock();
+                    lens.add_label(&name);
+                }
                 dialog_c.hide();
+                on_update.borrow_mut()();
             }
         });
         but_save.deactivate();
 
-        // Button delete callback
+        // Button cancel callback
         let mut dialog_c = dialog.clone();
         but_delete.set_callback(move || {
             dialog_c.hide();
@@ -63,7 +69,7 @@ impl AddLabelDialog {
 
         dialog.end();
         dialog.show();
-        
+
         while dialog.shown() {
             let _ = fltk::app::wait();
         }
