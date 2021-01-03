@@ -7,7 +7,7 @@ use fltk::*;
 
 use serious_organizer_lib::lens::Lens;
 
-use crate::table_utils::{draw_data, draw_header};
+use crate::table_utils::{draw_data, draw_header, pretty_size};
 #[derive(Clone)]
 pub struct FileTable {
     pub wid: TableRow,
@@ -59,7 +59,7 @@ impl FileTable {
                                 0 => draw_data(&file.name, x, y, w, h, selected, Align::Left),
                                 1 => draw_data(&file.path, x, y, w, h, selected, Align::Left),
                                 2 => draw_data(
-                                    &format!("{}", file.size),
+                                    &pretty_size(file.size),
                                     x,
                                     y,
                                     w,

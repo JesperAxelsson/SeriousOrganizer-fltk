@@ -22,3 +22,18 @@ pub fn draw_data(s: &str, x: i32, y: i32, w: i32, h: i32, selected: bool, align:
     draw::pop_clip();
 }
 
+const KB: i64 = 1000;
+const MB: i64 = KB * KB;
+const GB: i64 = KB * KB * KB;
+
+pub fn pretty_size(size: i64) -> String {
+    if size > GB {
+        format!("{} GB", (size / GB))
+    } else if size > MB {
+        format!("{} MB", (size / MB))
+    } else if size > KB {
+        format!("{} KB", (size / KB))
+    } else {
+        format!("{} B", size)
+    }
+}

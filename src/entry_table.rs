@@ -6,7 +6,7 @@ use fltk::*;
 
 use serious_organizer_lib::lens::Lens;
 
-use crate::table_utils::{draw_data, draw_header};
+use crate::table_utils::{draw_data, draw_header, pretty_size};
 
 #[derive(Clone)]
 pub struct EntryTable {
@@ -51,7 +51,7 @@ impl EntryTable {
                         match col {
                             0 => (dir.name.to_string(), Align::Left),
                             1 => (dir.path.to_string(), Align::Left),
-                            2 => (dir.size.to_string(), Align::Right),
+                            2 => (pretty_size(dir.size), Align::Right),
                             _ => ("".to_string(), Align::Center),
                         }
                     };
