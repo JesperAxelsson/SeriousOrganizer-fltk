@@ -190,6 +190,14 @@ fn main() {
     dir_tbl.handle(move |evt: Event| {
         let btn = app::event_button();
 
+        // Left click
+        //         if evt == Event::Push && btn == 1 {
+        //             // TableExt::col_header(&self)
+        //             let row = callback_row();
+        // println!("Left click");
+
+        //         }
+
         // Right click
         if evt == Event::Push && btn == 3 {
             let selection = dir_tbl_c.get_selected_index();
@@ -240,6 +248,8 @@ fn main() {
                         }
                     }
                 }
+
+                return true;
             }
         }
         false
@@ -265,15 +275,16 @@ fn main() {
     let mut file_tbl_c = file_tbl.clone();
     dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
     dir_tbl.wid.set_callback(move || {
-        let mut cl = 0;
-        let mut rt = 0;
-        let mut rb = 0;
-        let mut cr = 0;
-        dir_tbl_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
-        println!("Things changed!, {} {}", rt, rb);
+        // println!("Things changed!, {} {} {:?}", dir_tbl_c.callback_col(), dir_tbl_c.callback_row(), dir_tbl_c.callback_context());
 
-        if rt >= 0 {
-            file_tbl_c.set_dir_ix(rt as usize);
+        match dir_tbl_c.callback_context() {
+            fltk::table::TableContext::ColHeader => {
+                file_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
+            }
+            fltk::table::TableContext::Cell => {
+                file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
+            }
+            _ => (),
         }
     });
 
