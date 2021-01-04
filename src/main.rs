@@ -28,7 +28,7 @@ use entry_table::EntryTable;
 use file_table::FileTable;
 
 fn main() {
-    println!("Starting");
+    info!("Starting");
     CombinedLogger::init(vec![
         SimpleLogger::new(LevelFilter::Info, Config::default()),
         // WriteLogger::new(LevelFilter::Info, Config::default(), std::fs::File::create("serious_server.log").expect("Failed to init logger")),

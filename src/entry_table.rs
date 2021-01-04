@@ -76,7 +76,7 @@ impl EntryTable {
 
     pub fn get_selected_index(&mut self) -> Vec<u32> {
         let mut selected = Vec::new();
-        // draw_data(&data, x, y, w, h, table_c.row_selected(row), align);
+        
         for ix in 0..self.rows() {
             if self.row_selected(ix as i32) {
                 selected.push(ix as u32);
@@ -107,7 +107,7 @@ impl EntryTable {
         };
 
         self.lens.lock().order_by(col, ord);
-        
+
         *sort = Some(Sort::new(col, ord));
     }
 }
