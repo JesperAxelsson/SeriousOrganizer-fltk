@@ -4,7 +4,7 @@ use std::sync::Arc;
 use fltk::table::*;
 use fltk::*;
 
-use serious_organizer_lib::lens::Lens;
+use serious_organizer_lib::lens::{Lens, Sort, SortColumn, SortOrder};
 
 use crate::table_utils::{draw_data, draw_header, pretty_size};
 
@@ -12,6 +12,7 @@ use crate::table_utils::{draw_data, draw_header, pretty_size};
 pub struct EntryTable {
     pub wid: TableRow,
     lens: Arc<Mutex<Lens>>,
+    col_sort: Arc<Mutex<Option<Sort>>>,
 }
 
 impl EntryTable {
@@ -20,6 +21,7 @@ impl EntryTable {
         let mut table = EntryTable {
             wid: TableRow::new(x, y, w, h, ""),
             lens,
+            col_sort: Arc::new(Mutex::new(None)),
         };
 
         table.wid.set_row_height_all(20);
@@ -81,6 +83,37 @@ impl EntryTable {
             }
         }
         selected
+    }
+
+
+    pub fn toggle_sort_column(&mut self, col_id: i32) {
+        // println!("Got new file id: {}", new_id);
+
+        let mut l = self.lens.lock();
+        let mut sort = self.col_sort.lock();
+
+        let col = match col_id {
+            0 => SortColumn::Name,
+            1 => SortColumn::Path,
+            2 => SortColumn::Size,
+            _ => panic!("Trying to dir sort unknown column"),
+        };
+
+        let ord = if let Some(s) = &*sort {
+            if s.column == col && s.order == SortOrder::Asc {
+                SortOrder::Desc
+            } else {
+                SortOrder::Asc
+            }
+        } else {
+            SortOrder::Asc
+        };
+
+        println!("Sort by {:?} {:?} {:?}", sort, col, ord);
+
+        l.order_by(col, ord);
+
+        *sort = Some(Sort::new(col, ord));
     }
 }
 
