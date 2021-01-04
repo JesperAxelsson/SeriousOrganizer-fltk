@@ -3,7 +3,7 @@ use parking_lot::Mutex;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
 use std::{cell::RefCell, sync::Arc};
 
-use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, window};
+use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::TableContext, window};
 
 use open;
 
@@ -268,10 +268,10 @@ fn main() {
     dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
     dir_tbl.wid.set_callback(move || {
         match dir_tbl_c.callback_context() {
-            fltk::table::TableContext::ColHeader => {
+            TableContext::ColHeader => {
                 dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
             }
-            fltk::table::TableContext::Cell => {
+            TableContext::Cell => {
                 file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
             }
             _ => (),
@@ -282,7 +282,7 @@ fn main() {
     file_tbl.set_trigger(CallbackTrigger::Changed);
     file_tbl.set_callback(move || {
         match file_tbl_c.callback_context() {
-            fltk::table::TableContext::Cell => {
+            TableContext::Cell => {
                 file_tbl_c.set_file_ix(file_tbl_c.callback_row() as usize);
             }
             _ => (),
