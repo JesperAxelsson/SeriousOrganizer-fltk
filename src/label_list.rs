@@ -7,8 +7,6 @@ use fltk::*;
 use serious_organizer_lib::lens::LabelState;
 use serious_organizer_lib::lens::Lens;
 
-use time::Instant;
-
 use crate::table_utils::{draw_data, draw_header};
 
 use std::rc::Rc;
@@ -17,7 +15,6 @@ use std::rc::Rc;
 pub struct LabelList {
     pub wid: TableRow,
     lens: Arc<Mutex<Lens>>,
-    last_clicked: Instant,
     on_update: Rc<RefCell<dyn FnMut() -> ()>>,
 }
 
@@ -37,7 +34,6 @@ impl LabelList {
         let mut table = LabelList {
             wid: TableRow::new(x, y, w, h, ""),
             lens: lens,
-            last_clicked: Instant::now(),
             on_update,
         };
 
@@ -66,15 +62,12 @@ impl LabelList {
             .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
-                // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
                 table::TableContext::Cell => {
                     let selected = false;
 
                     let l = lens_c.lock();
                     let label_lst = l.get_labels();
                     let ref lbl = label_lst[row as usize];
-
-                    println!("Draw label {}", lbl.name);
 
                     let lbl_text = match lbl.state {
                         LabelState::Unset => "U",
@@ -105,45 +98,10 @@ impl LabelList {
         self.set_rows(label_count as u32);
     }
 
-    pub fn get_selected_index(&mut self) -> Vec<u32> {
-        let mut selected = Vec::new();
-        // draw_data(&data, x, y, w, h, table_c.row_selected(row), align);
-        for ix in 0..self.rows() {
-            if self.row_selected(ix as i32) {
-                selected.push(ix as u32);
-            }
-        }
-        selected
-    }
-
     fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
-        // if app::event_is_click() && (evt == Event::Push || evt == Event::Released) {
-        //     println!("Click {:?}", evt);
-        // }
-
-        // if !app::event_is_click() || app::event_clicks() {
-        //     return false;
-        // }
-
-        // if evt == Event::Push {
-        //     return false;
-        // }
-        if app::event_is_click() && evt == Event::Push {
-            if self.last_clicked.elapsed().whole_milliseconds() < 20 {
-                println!("Time limit");
-                return false;
-            }
-            self.last_clicked = Instant::now();
-
-            let lbl = self.get_selected_index();
-
-            // println!("Got selected lbls: {} {:?}", app::event_is_click(), evt);
-
-            if lbl.len() == 0 {
-                return false;
-            }
-
-            let lbl_ix = lbl[0] as usize;
+   
+        if app::event_is_click() && evt == Event::Push && self.callback_context() == TableContext::Cell {
+            let lbl_ix = self.callback_row() as usize;
             let state_change = {
                 let mut lens = lens.lock();
 
@@ -186,6 +144,7 @@ impl LabelList {
 
             if state_change {
                 self.on_update.borrow_mut()();
+                return true;
             }
         }
         false
@@ -193,8 +152,6 @@ impl LabelList {
 
     pub fn update(&mut self) {
         self.update_size();
-        self.redraw();
-        self.damage();
     }
 }
 
