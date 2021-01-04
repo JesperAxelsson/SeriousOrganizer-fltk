@@ -87,9 +87,6 @@ impl EntryTable {
 
 
     pub fn toggle_sort_column(&mut self, col_id: i32) {
-        // println!("Got new file id: {}", new_id);
-
-        let mut l = self.lens.lock();
         let mut sort = self.col_sort.lock();
 
         let col = match col_id {
@@ -109,10 +106,8 @@ impl EntryTable {
             SortOrder::Asc
         };
 
-        println!("Sort by {:?} {:?} {:?}", sort, col, ord);
-
-        l.order_by(col, ord);
-
+        self.lens.lock().order_by(col, ord);
+        
         *sort = Some(Sort::new(col, ord));
     }
 }
