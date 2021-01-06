@@ -134,18 +134,26 @@ fn main() {
     let lens_c = lens.clone();
     let mut last_click_started = false;
     file_tbl.handle(move |evt: Event| {
+        if file_tbl_c.callback_context() != TableContext::Cell {
+            return false;
+        }
+
         let btn = app::event_button();
         // Left click
         if evt == Event::Push && btn == 1 {
+            println!("Click!");
             if !app::event_clicks() {
                 last_click_started = false
             }
 
             let path = file_tbl_c.get_selected_file_path();
             if !last_click_started && app::event_clicks() && path.is_some() {
+                println!("Open!");
                 last_click_started = true;
                 open::that_in_background(path.unwrap());
             }
+
+            return true;
         }
 
         // Right click
@@ -177,6 +185,8 @@ fn main() {
                     }
                 }
             }
+
+            return true;
         }
         false
     });
@@ -266,8 +276,9 @@ fn main() {
     let mut dir_tbl_c = dir_tbl.clone();
     let mut file_tbl_c = file_tbl.clone();
     dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
-    dir_tbl.wid.set_callback(move || {
-        match dir_tbl_c.callback_context() {
+    dir_tbl
+        .wid
+        .set_callback(move || match dir_tbl_c.callback_context() {
             TableContext::ColHeader => {
                 dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
             }
@@ -275,18 +286,15 @@ fn main() {
                 file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
             }
             _ => (),
-        }
-    });
+        });
 
     let mut file_tbl_c = file_tbl.clone();
     file_tbl.set_trigger(CallbackTrigger::Changed);
-    file_tbl.set_callback(move || {
-        match file_tbl_c.callback_context() {
-            TableContext::Cell => {
-                file_tbl_c.set_file_ix(file_tbl_c.callback_row() as usize);
-            }
-            _ => (),
+    file_tbl.set_callback(move || match file_tbl_c.callback_context() {
+        TableContext::Cell => {
+            file_tbl_c.set_file_ix(file_tbl_c.callback_row() as usize);
         }
+        _ => (),
     });
 
     hpack.end();
