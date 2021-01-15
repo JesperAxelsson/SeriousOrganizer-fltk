@@ -39,7 +39,7 @@ impl LabelList {
 
         table.set_row_height_all(20);
         table.set_row_resize(true);
-        table.set_type(TableRowSelectMode::SelectSingle);
+        table.set_type(TableRowSelectMode::Single);
 
         // Cols
         table.set_cols(headers.len() as u32);
