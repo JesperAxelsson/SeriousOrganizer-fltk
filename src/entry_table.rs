@@ -17,7 +17,12 @@ pub struct EntryTable {
 
 impl EntryTable {
     pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> EntryTable {
-        let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
+        let headers = vec![
+            "Name".to_string(),
+            "Path".to_string(),
+            "Size".to_string(),
+            "ID".to_string(),
+        ];
         let mut table = EntryTable {
             wid: TableRow::new(x, y, w, h, ""),
             lens,
@@ -47,11 +52,14 @@ impl EntryTable {
                 table::TableContext::Cell => {
                     let l = lens_c.lock();
                     if let Some(dir) = l.get_dir_entry(row as usize) {
+                        let dir_id: i32 = dir.id.into();
+
                         let (data, align) = {
                             match col {
                                 0 => (dir.name.to_string(), Align::Left),
                                 1 => (dir.path.to_string(), Align::Left),
                                 2 => (pretty_size(dir.size), Align::Right),
+                                3 => (dir_id.to_string(), Align::Right),
                                 _ => ("".to_string(), Align::Center),
                             }
                         };
@@ -76,7 +84,7 @@ impl EntryTable {
 
     pub fn get_selected_index(&mut self) -> Vec<u32> {
         let mut selected = Vec::new();
-        
+
         for ix in 0..self.rows() {
             if self.row_selected(ix as i32) {
                 selected.push(ix as u32);
@@ -84,7 +92,6 @@ impl EntryTable {
         }
         selected
     }
-
 
     pub fn toggle_sort_column(&mut self, col_id: i32) {
         let mut sort = self.col_sort.lock();

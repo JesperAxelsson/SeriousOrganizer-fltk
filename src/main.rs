@@ -7,8 +7,8 @@ use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::Table
 
 use open;
 
-use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
+use serious_organizer_lib::{dir_search, models::EntryId};
 
 #[macro_use]
 extern crate log;
@@ -16,16 +16,20 @@ extern crate log;
 // mod counter;
 // mod layout;
 
-mod add_label_dialog;
 mod entry_table;
 mod file_table;
-mod label_list;
-mod location_dialog;
-mod location_table;
+mod label;
+mod location;
 mod table_utils;
 
 use entry_table::EntryTable;
 use file_table::FileTable;
+
+use label::add_label_dialog;
+use label::entry_label_dialog;
+use label::label_list;
+use location::location_dialog;
+use location::location_table;
 
 fn main() {
     info!("Starting");
@@ -207,13 +211,13 @@ fn main() {
             if selection.len() > 0 {
                 println!("Context menu!");
 
-                let v = vec!["1st val", "2nd val", "3rd val"];
+                let v = vec!["Add label", "Label >", "3rd val"];
                 let mut x = MenuItem::new(&v);
                 match x.popup(app::event_x(), app::event_y()) {
                     None => println!("No value was chosen!"),
                     Some(val) => {
                         println!("{}", val.label().unwrap());
-                        if val.label().unwrap() == "1st val" {
+                        if val.label().unwrap() == "Add label" {
                             let dialog = add_label_dialog::AddLabelDialog::new(
                                 lens_c.clone(),
                                 label_update.clone(),
@@ -222,17 +226,43 @@ fn main() {
                             label_update.borrow_mut()();
                         }
 
-                        if val.label().unwrap() == "2nd val" {
-                            let mut lens = lens_c.lock();
+                        if val.label().unwrap() == "Label >" {
                             let mut entries = Vec::new();
 
-                            for ix in selection.iter() {
-                                if let Some(id) = lens.convert_ix(*ix as usize) {
-                                    entries.push(id as u32);
+                            {
+                                let lens = lens_c.lock();
+                                // Get selected entries
+                                for ix in selection.iter() {
+                                    if let Some(dir_entry) = lens.get_dir_entry(*ix as usize) {
+
+                                        let EntryId(id) = dir_entry.id;
+                                        println!("Convert ix {} to {}", ix, id);
+                                        entries.push(id as u32);
+                                    }
                                 }
                             }
 
-                            lens.add_entry_labels(entries, vec![1, 2])
+                            println!("Got entries: {:?}", entries);
+
+                            // Label select dialog
+                            let dialog = entry_label_dialog::EntryLabelDialog::new(
+                                lens_c.clone(),
+                                entries,
+                                // label_update.clone(),
+                            );
+
+                            dialog.show();
+
+                            // let mut lens = lens_c.lock();
+                            // let mut entries = Vec::new();
+
+                            // for ix in selection.iter() {
+                            //     if let Some(id) = lens.convert_ix(*ix as usize) {
+                            //         entries.push(id as u32);
+                            //     }
+                            // }
+
+                            // lens.add_entry_labels(entries, vec![1, 2])
                         }
 
                         if val.label().unwrap() == "3rd val" {
