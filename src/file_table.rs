@@ -56,20 +56,23 @@ impl FileTable {
                         let l = lens_c.lock();
                         let files = l.get_dir_files(dir_id as usize);
                         if let Some(files) = files {
-                            let file = &files[row as usize];
-                            match col {
-                                0 => draw_data(&file.name, x, y, w, h, selected, Align::Left),
-                                1 => draw_data(&file.path, x, y, w, h, selected, Align::Left),
-                                2 => draw_data(
-                                    &pretty_size(file.size),
-                                    x,
-                                    y,
-                                    w,
-                                    h,
-                                    selected,
-                                    Align::Right,
-                                ),
-                                _ => (),
+                            let row = row as usize;
+                            if row < files.len() {
+                                let file = &files[row as usize];
+                                match col {
+                                    0 => draw_data(&file.name, x, y, w, h, selected, Align::Left),
+                                    1 => draw_data(&file.path, x, y, w, h, selected, Align::Left),
+                                    2 => draw_data(
+                                        &pretty_size(file.size),
+                                        x,
+                                        y,
+                                        w,
+                                        h,
+                                        selected,
+                                        Align::Right,
+                                    ),
+                                    _ => (),
+                                }
                             }
                         };
                     } else {
@@ -93,10 +96,11 @@ impl FileTable {
             // get_dir_count
             let lens = self.lens.lock();
             if new_id < lens.get_dir_count() {
-                let len = lens.get_file_count(new_id).unwrap();
-                self.wid.set_rows(len as u32);
-                self.wid.redraw();
-                // println!("Redrawing, len {}", len);
+                if let Some(len) = lens.get_file_count(new_id) {
+                    self.wid.set_rows(len as u32);
+                    self.wid.redraw();
+                    // println!("Redrawing, len {}", len);
+                }
             }
         }
     }
