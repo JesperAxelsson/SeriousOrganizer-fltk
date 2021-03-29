@@ -5,16 +5,21 @@ use std::sync::Arc;
 use fltk::table::*;
 use fltk::*;
 
-use serious_organizer_lib::lens::Lens;
+use serious_organizer_lib::{
+    lens::{Lens, Sort, SortColumn, SortOrder},
+    models::File,
+};
 
 use crate::table_utils::{draw_data, draw_header, pretty_size};
+
 #[derive(Clone)]
 pub struct FileTable {
     pub wid: TableRow,
     dir_id: Arc<AtomicIsize>,
     file_id: Arc<AtomicIsize>,
     lens: Arc<Mutex<Lens>>,
-    // col_sort: Arc<Mutex<Option<Sort>>>,
+    pub files: Arc<Mutex<Option<Vec<File>>>>,
+    col_sort: Arc<Mutex<Sort>>,
 }
 
 impl FileTable {
@@ -25,7 +30,8 @@ impl FileTable {
             lens: lens,
             dir_id: Arc::new(AtomicIsize::new(-1)),
             file_id: Arc::new(AtomicIsize::new(-1)),
-            // col_sort: Arc::new(Mutex::new(None)),
+            files: Arc::new(Mutex::new(None)),
+            col_sort: Arc::new(Mutex::new(Sort::new(SortColumn::Name, SortOrder::Desc))),
         };
 
         table.wid.set_row_height_all(20);
@@ -39,9 +45,9 @@ impl FileTable {
         table.wid.end();
         table.wid.set_rows(0);
 
-        let mut table_c = table.wid.clone();
+        let mut table_c = table.clone();
 
-        let lens_c = table.lens.clone();
+        // let lens_c = table.lens.clone();
         let dir_id_c = table.dir_id.clone();
         table
             .wid
@@ -53,9 +59,10 @@ impl FileTable {
                     let dir_id = dir_id_c.load(Ordering::Relaxed);
                     if dir_id >= 0 {
                         let selected = table_c.row_selected(row);
-                        let l = lens_c.lock();
-                        let files = l.get_dir_files(dir_id as usize);
-                        if let Some(files) = files {
+                        // let l = lens_c.lock();
+                        // let files = l.get_dir_files(dir_id as usize);
+                        // let ref files = table_c.files.lock();
+                        if let Some(files) = &*table_c.files.lock() {
                             let row = row as usize;
                             if row < files.len() {
                                 let file = &files[row as usize];
@@ -94,7 +101,13 @@ impl FileTable {
             self.dir_id.store(new_id_i, Ordering::Relaxed);
 
             // get_dir_count
-            let lens = self.lens.lock();
+            let lens = &*self.lens.lock();
+            {
+                *self.files.lock() = lens.get_dir_files(new_id).cloned();
+            }
+
+            self.sort_by_column();
+
             if new_id < lens.get_dir_count() {
                 if let Some(len) = lens.get_file_count(new_id) {
                     self.wid.set_rows(len as u32);
@@ -131,35 +144,70 @@ impl FileTable {
         }
     }
 
-    // pub fn toggle_sort_column(&mut self, col_id: i32) {
-    //     // println!("Got new file id: {}", new_id);
+    fn sort_by_column(&self) {
+        {
+            if self.files.lock().is_none() {
+                return;
+            }
+        }
 
-    //     let mut l = self.lens.lock();
-    //     let mut sort = self.col_sort.lock();
+        let (column, order) = {
+            let sort = self.col_sort.lock();
+            (sort.column, sort.order)
+        };
 
-    //     let col = match col_id {
-    //         0 => SortColumn::Name,
-    //         1 => SortColumn::Path,
-    //         2 => SortColumn::Size,
-    //         _ => panic!("Trying to dir sort unknown column"),
-    //     };
+        let selector = |ax: &File, bx: &File| {
+            let a = ax;
+            let b = bx;
 
-    //     let ord = if let Some(s) = &*sort {
-    //         if s.column == col && s.order == SortOrder::Asc {
-    //             SortOrder::Desc
-    //         } else {
-    //             SortOrder::Asc
-    //         }
-    //     } else {
-    //         SortOrder::Asc
-    //     };
+            match column {
+                SortColumn::Date => a.name.cmp(&b.name),
+                SortColumn::Name => a.name.cmp(&b.name),
+                SortColumn::Path => a.path.cmp(&b.path),
+                SortColumn::Size => a.size.cmp(&b.size),
+            }
+        };
 
-    //     println!("Sort by {:?} {:?} {:?}", sort, col, ord);
+        (*self.files.lock()).as_mut().unwrap().sort_by(move |a, b| {
+            let ordered = selector(a, b);
 
-    //     l.order_by(col, ord);
+            match order {
+                SortOrder::Asc => ordered,
+                SortOrder::Desc => ordered.reverse(),
+            }
+        });
+    }
 
-    //     *sort = Some(Sort::new(col, ord));
-    // }
+    pub fn toggle_sort_column(&self, col_id: i32) {
+        // println!("Got new file id: {}", new_id);
+
+        // let mut l = self.lens.lock();
+        {
+            let mut sort = self.col_sort.lock();
+
+            let col = match col_id {
+                0 => SortColumn::Name,
+                1 => SortColumn::Path,
+                2 => SortColumn::Size,
+                _ => panic!("Trying to dir sort unknown column"),
+            };
+
+            let ord = {
+                if sort.column == col && sort.order == SortOrder::Asc {
+                    SortOrder::Desc
+                } else {
+                    SortOrder::Asc
+                }
+            };
+
+            println!("Sort by {:?} {:?} {:?}", sort, col, ord);
+
+            // l.order_by(col, ord);
+
+            *sort = Sort::new(col, ord);
+        }
+        self.sort_by_column();
+    }
 }
 
 use std::ops::{Deref, DerefMut};

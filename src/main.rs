@@ -169,7 +169,7 @@ fn main() {
                 println!("Context menu!");
 
                 let v = vec!["1st val", "2nd val", "3rd val"];
-                let mut x = MenuItem::new(&v);
+                let x = MenuItem::new(&v);
                 match x.popup(app::event_x(), app::event_y()) {
                     None => println!("No value was chosen!"),
                     Some(val) => {
@@ -212,7 +212,7 @@ fn main() {
                 println!("Context menu!");
 
                 let v = vec!["Add label", "Label >", "3rd val"];
-                let mut x = MenuItem::new(&v);
+                let x = MenuItem::new(&v);
                 match x.popup(app::event_x(), app::event_y()) {
                     None => println!("No value was chosen!"),
                     Some(val) => {
@@ -234,7 +234,6 @@ fn main() {
                                 // Get selected entries
                                 for ix in selection.iter() {
                                     if let Some(dir_entry) = lens.get_dir_entry(*ix as usize) {
-
                                         let EntryId(id) = dir_entry.id;
                                         println!("Convert ix {} to {}", ix, id);
                                         entries.push(id as u32);
@@ -321,6 +320,9 @@ fn main() {
     let mut file_tbl_c = file_tbl.clone();
     file_tbl.set_trigger(CallbackTrigger::Changed);
     file_tbl.set_callback(move || match file_tbl_c.callback_context() {
+        TableContext::ColHeader => {
+            file_tbl_c.toggle_sort_column(file_tbl_c.callback_col());
+        }
         TableContext::Cell => {
             file_tbl_c.set_file_ix(file_tbl_c.callback_row() as usize);
         }
