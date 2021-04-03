@@ -28,7 +28,7 @@ const GB: i64 = KB * KB * KB;
 
 pub fn pretty_size(size: i64) -> String {
     if size > GB {
-        format!("{} GB", (size / GB))
+        format!("{:.1} GB", (size as f32 / GB as f32))
     } else if size > MB {
         format!("{} MB", (size / MB))
     } else if size > KB {
