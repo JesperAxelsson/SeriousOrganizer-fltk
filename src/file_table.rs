@@ -127,21 +127,25 @@ impl FileTable {
         let file_id = self.file_id.load(Ordering::Relaxed);
         let dir_id = self.dir_id.load(Ordering::Relaxed);
 
-        if dir_id < 0 || file_id < 0 {
+        let files = &*self.files.lock();
+
+        if files.is_none() || dir_id < 0 || file_id < 0 {
             return None;
         }
 
-        let dir_id = dir_id as usize;
+        // let dir_id = dir_id as usize;
         let file_id = file_id as usize;
 
-        let lenf = self.lens.lock();
-        let ff = lenf.get_file_entry(dir_id, file_id);
-
-        if let Some(file) = ff {
-            return Some(file.path.clone());
-        } else {
-            None
+        // let lenf = self.lens.lock();
+        // let ff = lenf.get_file_entry(dir_id, file_id);
+        if let Some(ref bl) = files {
+            let ff = bl.get(file_id);
+            if let Some(file) = ff {
+                return Some(file.path.clone());
+            }
         }
+        // return Some(ff.path.clone());
+        None
     }
 
     fn sort_by_column(&self) {
