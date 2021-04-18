@@ -1,4 +1,7 @@
 use fltk::{button::*, window::*};
+
+use fltk::{prelude::*};
+
 use serious_organizer_lib::{lens::Lens, models::LabelId};
 // use serious_organizer_lib::lens
 use parking_lot::Mutex;
@@ -53,7 +56,7 @@ impl EntryLabelDialog {
         let lbl_table_c = lbl_table.clone();
         let lens_c = self.lens.clone();
         let mut dialog_c = dialog.clone();
-        but_save.set_callback(move || {
+        but_save.set_callback(move |_| {
             let currently_selected_labels = lbl_table_c.selected_label_ids.lock();
 
             println!("Entries lbls: {:?}", entry_ids_c);
@@ -93,7 +96,7 @@ impl EntryLabelDialog {
 
         // Button delete callback
         let mut dialog_c = dialog.clone();
-        but_delete.set_callback(move || {
+        but_delete.set_callback(move |_| {
             dialog_c.hide();
         });
 

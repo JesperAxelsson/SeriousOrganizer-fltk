@@ -1,8 +1,9 @@
+use enums::Font;
 use parking_lot::Mutex;
 use std::{collections::HashSet, sync::Arc};
 
 use fltk::table::*;
-use fltk::*;
+use fltk::{prelude::*, enums::*, *};
 
 use serious_organizer_lib::lens::Lens;
 use serious_organizer_lib::models::LabelId;
@@ -41,7 +42,7 @@ impl EntryLabelList {
         table.set_type(TableRowSelectMode::Single);
 
         // Cols
-        table.set_cols(headers.len() as u32);
+        table.set_cols(headers.len() as i32);
         table.set_col_header(true);
         table.set_col_resize(true);
 
@@ -51,14 +52,14 @@ impl EntryLabelList {
 
         let lens_c = table.lens.clone();
         let mut table_c = table.clone();
-        table.handle(move |evt| table_c.handle_event(evt, lens_c.clone()));
+        table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
 
         let lens_c = table.lens.clone();
         let selected_label_ids_c = table.selected_label_ids.clone();
 
         table
             .wid
-            .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |_, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 table::TableContext::Cell => {
@@ -98,7 +99,7 @@ impl EntryLabelList {
         };
 
         println!("Label count: {}", label_count);
-        self.set_rows(label_count as u32);
+        self.set_rows(label_count as i32);
     }
 
     fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {

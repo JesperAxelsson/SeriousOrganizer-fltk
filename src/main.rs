@@ -4,6 +4,7 @@ use simplelog::{CombinedLogger, Config, SimpleLogger};
 use std::{cell::RefCell, sync::Arc};
 
 use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::TableContext, window};
+use fltk::{enums::*, prelude::*};
 
 use open;
 
@@ -108,7 +109,7 @@ fn main() {
 
     let lens_c = lens.clone();
 
-    but_reload.set_callback(move || {
+    but_reload.set_callback(move |_| {
         let mut lens = lens_c.lock();
         println!("Start update data");
 
@@ -125,7 +126,7 @@ fn main() {
 
     let lens_c = lens.clone();
 
-    but.set_callback(move || {
+    but.set_callback(move |_| {
         // println!("Hello World!");
         let dialog = location_dialog::LocationDialog::new(lens_c.clone());
         dialog.show();
@@ -137,7 +138,7 @@ fn main() {
     let label_update = Rc::new(RefCell::new(move || label_tbl_c.update()));
     let lens_c = lens.clone();
     let mut last_click_started = false;
-    file_tbl.handle(move |evt: Event| {
+    file_tbl.handle(move |_, evt: Event| {
         if file_tbl_c.callback_context() != TableContext::Cell {
             return false;
         }
@@ -201,7 +202,7 @@ fn main() {
     let mut label_tbl_c = label_list.clone();
     let label_update = Rc::new(RefCell::new(move || label_tbl_c.update()));
     let lens_c = lens.clone();
-    dir_tbl.handle(move |evt: Event| {
+    dir_tbl.handle(move |_, evt: Event| {
         let btn = app::event_button();
 
         // Right click
@@ -291,14 +292,14 @@ fn main() {
     input.set_trigger(CallbackTrigger::Changed);
     let lens_c = lens.clone();
     let mut dir_tbl_c = dir_tbl.wid.clone();
-    input.set_callback2(move |input_c: &mut Input| {
+    input.set_callback(move |input_c: &mut Input| {
         let dir_count;
         {
             let mut lens = lens_c.lock();
             lens.update_search_text(&input_c.value());
             dir_count = lens.get_dir_count();
         }
-        dir_tbl_c.set_rows(dir_count as u32);
+        dir_tbl_c.set_rows(dir_count as i32);
         println!("Banan editing {} found: {}", input_c.value(), dir_count);
     });
 
@@ -307,7 +308,7 @@ fn main() {
     dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
     dir_tbl
         .wid
-        .set_callback(move || match dir_tbl_c.callback_context() {
+        .set_callback(move |_| match dir_tbl_c.callback_context() {
             TableContext::ColHeader => {
                 dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
             }
@@ -319,7 +320,7 @@ fn main() {
 
     let mut file_tbl_c = file_tbl.clone();
     file_tbl.set_trigger(CallbackTrigger::Changed);
-    file_tbl.set_callback(move || match file_tbl_c.callback_context() {
+    file_tbl.set_callback(move |_| match file_tbl_c.callback_context() {
         TableContext::ColHeader => {
             file_tbl_c.toggle_sort_column(file_tbl_c.callback_col());
         }

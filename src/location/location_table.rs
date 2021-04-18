@@ -1,5 +1,6 @@
 use fltk::table::*;
 use fltk::*;
+use fltk::{prelude::*, enums::*};
 
 use crate::table_utils::{draw_data, draw_header};
 
@@ -25,14 +26,14 @@ impl LocationTable {
         table.wid.set_row_resize(true);
 
         // Cols
-        table.wid.set_cols(headers.len() as u32);
+        table.wid.set_cols(headers.len() as i32);
         table.wid.set_col_header(true);
         table.wid.set_col_resize(true);
 
         table.wid.end();
-        table.wid.set_rows(row_count);
+        table.wid.set_rows(row_count as i32);
 
-        table.wid.draw_cell2(
+        table.wid.draw_cell(
             move |table_c: &mut TableRow, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),

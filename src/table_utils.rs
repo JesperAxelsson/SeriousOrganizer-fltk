@@ -1,3 +1,4 @@
+use fltk::enums::*;
 use fltk::*;
 
 pub fn draw_header(s: &str, x: i32, y: i32, w: i32, h: i32) {

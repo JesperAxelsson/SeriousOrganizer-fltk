@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::sync::Arc;
 
 use fltk::table::*;
-use fltk::*;
+use fltk::{prelude::*, enums::*, *};
 
 use serious_organizer_lib::{
     lens::{Lens, Sort, SortColumn, SortOrder},
@@ -38,7 +38,7 @@ impl FileTable {
         table.wid.set_row_resize(true);
 
         // Cols
-        table.wid.set_cols(headers.len() as u32);
+        table.wid.set_cols(headers.len() as i32);
         table.wid.set_col_header(true);
         table.wid.set_col_resize(true);
 
@@ -51,7 +51,7 @@ impl FileTable {
         let dir_id_c = table.dir_id.clone();
         table
             .wid
-            .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |_, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
@@ -110,7 +110,7 @@ impl FileTable {
 
             if new_id < lens.get_dir_count() {
                 if let Some(len) = lens.get_file_count(new_id) {
-                    self.wid.set_rows(len as u32);
+                    self.wid.set_rows(len as i32);
                     self.wid.redraw();
                     // println!("Redrawing, len {}", len);
                 }

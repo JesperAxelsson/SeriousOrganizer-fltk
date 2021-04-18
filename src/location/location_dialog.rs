@@ -1,5 +1,6 @@
 use fltk::table::TableRow;
 use fltk::{button::*, input::*, window::*};
+use fltk::{enums::*, prelude::*};
 use serious_organizer_lib::lens::Lens;
 // use serious_organizer_lib::lens
 use parking_lot::Mutex;
@@ -103,14 +104,14 @@ impl LocationDialog {
         let location_c = self.location.clone();
         let lens_c = self.lens.clone();
         let mut table_c = location_table.clone();
-        but_save.set_callback(move || {
+        but_save.set_callback(move |_| {
             let loc = location_c.lock();
             if let Some((name, path)) = loc.values() {
                 let mut lens = lens_c.lock();
                 lens.add_location(&name, &path);
 
                 let len = lens.get_locations().len();
-                table_c.set_rows(len as u32);
+                table_c.set_rows(len as i32);
                 table_c.redraw();
             }
         });
@@ -120,7 +121,7 @@ impl LocationDialog {
         let lens_c = self.lens.clone();
         let select_c = self.selected_location.clone();
         let mut table_c = location_table.clone();
-        but_delete.set_callback(move || {
+        but_delete.set_callback(move |_| {
             let select = *select_c.lock();
             if let Some(loc_ix) = select {
                 let mut lens = lens_c.lock();
@@ -132,7 +133,7 @@ impl LocationDialog {
                 lens.remove_location(loc_id as u32);
 
                 let len = lens.get_locations().len();
-                table_c.set_rows(len as u32);
+                table_c.set_rows(len as i32);
                 table_c.redraw();
             }
         });
@@ -142,7 +143,7 @@ impl LocationDialog {
         input_name.set_trigger(CallbackTrigger::Changed);
         let location_c = self.location.clone();
         let mut but_c = but_save.clone();
-        input_name.set_callback2(move |input_c: &mut Input| {
+        input_name.set_callback(move |input_c: &mut Input| {
             let name = input_c.value();
             let mut loc = location_c.lock();
             loc.set_name(&name);
@@ -158,7 +159,7 @@ impl LocationDialog {
         input_path.set_trigger(CallbackTrigger::Changed);
         let location_c = self.location.clone();
         let mut but_c = but_save.clone();
-        input_path.set_callback2(move |input_c: &mut Input| {
+        input_path.set_callback(move |input_c: &mut Input| {
             let path = input_c.value();
             let mut loc = location_c.lock();
             loc.set_path(&path);
@@ -174,21 +175,19 @@ impl LocationDialog {
         let select_c = self.selected_location.clone();
         let mut but_c = but_delete.clone();
         location_table.wid.set_trigger(CallbackTrigger::Changed);
-        location_table.wid.set_callback2( move |table_c: &mut TableRow| {
-            let mut cl = 0;
-            let mut rt = 0;
-            let mut rb = 0;
-            let mut cr = 0;
-            table_c.get_selection(&mut rt, &mut cl, &mut rb, &mut cr);
-            println!("Select location!, {} {}", rt, rb);
-            if rt >= 0 {
-                *select_c.lock() = Some(rt as usize);
-                but_c.activate();
-            } else {
-                *select_c.lock() = None;
-                but_c.deactivate();
-            }
-        });
+        location_table
+            .wid
+            .set_callback(move |table_c: &mut TableRow| {
+                let (rt, _cl, rb, _cr) = table_c.get_selection();
+                println!("Select location!, {} {}", rt, rb);
+                if rt >= 0 {
+                    *select_c.lock() = Some(rt as usize);
+                    but_c.activate();
+                } else {
+                    *select_c.lock() = None;
+                    but_c.deactivate();
+                }
+            });
 
         dialog.end();
         dialog.show();

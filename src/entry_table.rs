@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 
 use fltk::table::*;
-use fltk::*;
+use fltk::{prelude::*, enums::*, *};
 
 use serious_organizer_lib::lens::{Lens, Sort, SortColumn, SortOrder};
 
@@ -32,20 +32,20 @@ impl EntryTable {
         table.wid.set_row_resize(true);
 
         // Cols
-        table.wid.set_cols(headers.len() as u32);
+        table.wid.set_cols(headers.len() as i32);
         table.wid.set_col_header(true);
         table.wid.set_col_resize(true);
 
         table.wid.end();
-        table.wid.set_rows(table.lens.lock().get_dir_count() as u32);
+        table.wid.set_rows(table.lens.lock().get_dir_count() as i32);
 
-        let mut table_c = table.wid.clone();
+        // let mut table_c = table.wid.clone();
 
         let lens_c = table.lens.clone();
 
         table
             .wid
-            .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 table::TableContext::Cell => {
@@ -61,7 +61,7 @@ impl EntryTable {
                             }
                         };
 
-                        draw_data(&data, x, y, w, h, table_c.row_selected(row), align)
+                        draw_data(&data, x, y, w, h, t.row_selected(row), align)
                     }
                 }
                 _ => (),
@@ -74,7 +74,7 @@ impl EntryTable {
     // }
 
     pub fn update(&mut self) {
-        let dir_count = { self.lens.lock().get_dir_count() as u32 };
+        let dir_count = { self.lens.lock().get_dir_count() as i32 };
         self.set_rows(dir_count);
         self.redraw();
     }

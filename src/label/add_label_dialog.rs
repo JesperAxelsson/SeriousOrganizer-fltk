@@ -1,4 +1,5 @@
 use fltk::{button::*, input::*, window::*};
+use fltk::{prelude::*, enums::*};
 use serious_organizer_lib::lens::Lens;
 // use serious_organizer_lib::lens
 use parking_lot::Mutex;
@@ -32,7 +33,7 @@ impl AddLabelDialog {
         let label_c = self.label.clone();
         let on_update = self.on_update.clone();
         let mut dialog_c = dialog.clone();
-        but_save.set_callback(move || {
+        but_save.set_callback(move |_| {
             let lbl = label_c.lock();
             if let Some(ref name) = *lbl {
                 {
@@ -47,7 +48,7 @@ impl AddLabelDialog {
 
         // Button cancel callback
         let mut dialog_c = dialog.clone();
-        but_delete.set_callback(move || {
+        but_delete.set_callback(move |_| {
             dialog_c.hide();
         });
 
@@ -55,7 +56,7 @@ impl AddLabelDialog {
         let label_c = self.label.clone();
         let mut but_c = but_save.clone();
         input_name.set_trigger(CallbackTrigger::Changed);
-        input_name.set_callback2(move |input_c: &mut Input| {
+        input_name.set_callback(move |input_c: &mut Input| {
             let name = input_c.value();
             let mut lbl = label_c.lock();
             if !name.is_empty() {

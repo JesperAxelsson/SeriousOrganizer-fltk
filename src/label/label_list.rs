@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::{cell::RefCell, sync::Arc};
 
 use fltk::table::*;
-use fltk::*;
+use fltk::{enums::*, prelude::*, *};
 
 use serious_organizer_lib::lens::LabelState;
 use serious_organizer_lib::lens::Lens;
@@ -42,7 +42,7 @@ impl LabelList {
         table.set_type(TableRowSelectMode::Single);
 
         // Cols
-        table.set_cols(headers.len() as u32);
+        table.set_cols(headers.len() as i32);
         table.set_col_header(true);
         table.set_col_resize(true);
 
@@ -52,14 +52,14 @@ impl LabelList {
 
         let lens_c = table.lens.clone();
         let mut table_c = table.clone();
-        table.handle(move |evt| table_c.handle_event(evt, lens_c.clone()));
+        table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
         println!("Setup label click handler");
 
         let lens_c = table.lens.clone();
 
         table
             .wid
-            .draw_cell(move |ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |_,ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 table::TableContext::Cell => {
@@ -95,12 +95,14 @@ impl LabelList {
         };
 
         println!("Label count: {}", label_count);
-        self.set_rows(label_count as u32);
+        self.set_rows(label_count as i32);
     }
 
     fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
-   
-        if app::event_is_click() && evt == Event::Push && self.callback_context() == TableContext::Cell {
+        if app::event_is_click()
+            && evt == Event::Push
+            && self.callback_context() == TableContext::Cell
+        {
             let lbl_ix = self.callback_row() as usize;
             let state_change = {
                 let mut lens = lens.lock();
