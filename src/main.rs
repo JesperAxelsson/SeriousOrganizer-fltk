@@ -21,6 +21,7 @@ mod entry_table;
 mod file_table;
 mod label;
 mod location;
+mod rename_dialog;
 mod table_utils;
 
 use entry_table::EntryTable;
@@ -169,7 +170,7 @@ fn main() {
             if path.is_some() {
                 println!("Context menu!");
 
-                let v = vec!["1st val", "2nd val", "3rd val"];
+                let v = vec!["1st val", "2nd val", "3rd val", "Rename Entry"];
                 let x = MenuItem::new(&v);
                 match x.popup(app::event_x(), app::event_y()) {
                     None => println!("No value was chosen!"),
@@ -212,7 +213,7 @@ fn main() {
             if selection.len() > 0 {
                 println!("Context menu!");
 
-                let v = vec!["Add label", "Label >", "3rd val"];
+                let v = vec!["Add label", "Label >", "3rd val", "Rename Entry"];
                 let x = MenuItem::new(&v);
                 match x.popup(app::event_x(), app::event_y()) {
                     None => println!("No value was chosen!"),
@@ -252,17 +253,6 @@ fn main() {
                             );
 
                             dialog.show();
-
-                            // let mut lens = lens_c.lock();
-                            // let mut entries = Vec::new();
-
-                            // for ix in selection.iter() {
-                            //     if let Some(id) = lens.convert_ix(*ix as usize) {
-                            //         entries.push(id as u32);
-                            //     }
-                            // }
-
-                            // lens.add_entry_labels(entries, vec![1, 2])
                         }
 
                         if val.label().unwrap() == "3rd val" {
@@ -277,6 +267,19 @@ fn main() {
                             }
 
                             lens.remove_entry_labels(entries, vec![2])
+                        }
+
+                        if val.label().unwrap() == "Rename Entry" {
+                            let entry_ix = selection.iter().next().unwrap();
+                            let entry = {
+                                lens_c
+                                    .lock()
+                                    .get_dir_entry(*entry_ix as usize)
+                                    .unwrap()
+                                    .clone()
+                            };
+                            let dialog = rename_dialog::RenameDialog::new(lens_c.clone(), entry);
+                            dialog.show();
                         }
                     }
                 }
