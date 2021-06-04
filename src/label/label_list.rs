@@ -59,7 +59,7 @@ impl LabelList {
 
         table
             .wid
-            .draw_cell(move |_,ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |_, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 table::TableContext::Cell => {
@@ -67,20 +67,20 @@ impl LabelList {
 
                     let l = lens_c.lock();
                     let label_lst = l.get_labels();
-                    let ref lbl = label_lst[row as usize];
+                    if let Some(ref lbl) = label_lst.get(row as usize) {
+                        let lbl_text = match lbl.state {
+                            LabelState::Unset => "U",
+                            LabelState::Include => "I",
+                            LabelState::Exclude => "E",
+                        };
 
-                    let lbl_text = match lbl.state {
-                        LabelState::Unset => "U",
-                        LabelState::Include => "I",
-                        LabelState::Exclude => "E",
-                    };
+                        match col {
+                            0 => draw_data(&lbl.name, x, y, w, h, selected, Align::Left),
+                            1 => draw_data(lbl_text, x, y, w, h, selected, Align::Right),
 
-                    match col {
-                        0 => draw_data(&lbl.name, x, y, w, h, selected, Align::Left),
-                        1 => draw_data(lbl_text, x, y, w, h, selected, Align::Right),
-
-                        _ => (),
-                    };
+                            _ => (),
+                        };
+                    }
                 }
                 _ => (),
             });
@@ -100,45 +100,55 @@ impl LabelList {
 
     fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
         if app::event_is_click()
-            && evt == Event::Push
+            && evt == Event::Released
             && self.callback_context() == TableContext::Cell
         {
+            // println!(
+            //     "LableList event: [{:?}] context: {:?} {:?}",
+            //     evt,
+            //     self.callback_context(),
+            //     self.callback_row()
+            // );
+
             let lbl_ix = self.callback_row() as usize;
             let state_change = {
                 let mut lens = lens.lock();
 
                 let labels_list = lens.get_labels();
-                let ref lbl = labels_list[lbl_ix];
-                let label_id: i32 = lbl.id.into();
-                let label_id: u32 = label_id as u32;
+                if let Some(ref lbl) = labels_list.get(lbl_ix) {
+                    let label_id: i32 = lbl.id.into();
+                    let label_id: u32 = label_id as u32;
 
-                let btn = app::event_button();
+                    let btn = app::event_button();
 
-                // Left click
-                if btn == 1 {
-                    println!("Mouse left clicked {:?}", lbl.state);
+                    // Left click
+                    if btn == 1 {
+                        println!("Mouse left clicked {:?} {:?}", lbl.state, lbl.name);
 
-                    match lbl.state {
-                        LabelState::Unset => lens.add_inlude_label(label_id),
-                        LabelState::Include => (), // Do nothing
-                        LabelState::Exclude => lens.remove_label_filter(label_id),
-                    };
+                        match lbl.state {
+                            LabelState::Unset => lens.add_inlude_label(label_id),
+                            LabelState::Include => (), // Do nothing
+                            LabelState::Exclude => lens.remove_label_filter(label_id),
+                        };
 
-                    self.redraw();
-                    true
+                        self.redraw();
+                        true
 
-                // Right click
-                } else if btn == 3 {
-                    println!("Mouse right clicked {:?}", lbl.state);
+                    // Right click
+                    } else if btn == 3 {
+                        println!("Mouse right clicked {:?} {:?}", lbl.state, lbl.name);
 
-                    match lbl.state {
-                        LabelState::Unset => lens.add_exclude_label(label_id),
-                        LabelState::Include => lens.remove_label_filter(label_id),
-                        LabelState::Exclude => (), // Do nothing
-                    };
+                        match lbl.state {
+                            LabelState::Unset => lens.add_exclude_label(label_id),
+                            LabelState::Include => lens.remove_label_filter(label_id),
+                            LabelState::Exclude => (), // Do nothing
+                        };
 
-                    self.redraw();
-                    true
+                        self.redraw();
+                        true
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
