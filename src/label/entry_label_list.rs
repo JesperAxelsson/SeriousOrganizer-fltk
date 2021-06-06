@@ -3,7 +3,7 @@ use parking_lot::Mutex;
 use std::{collections::HashSet, sync::Arc};
 
 use fltk::table::*;
-use fltk::{prelude::*, enums::*, *};
+use fltk::{enums::*, prelude::*, *};
 
 use serious_organizer_lib::lens::Lens;
 use serious_organizer_lib::models::LabelId;
@@ -67,24 +67,25 @@ impl EntryLabelList {
 
                     let l = lens_c.lock();
                     let label_lst = l.get_labels();
-                    let ref lbl = label_lst[row as usize];
 
-                    let LabelId(lbl_id) = lbl.id;
+                    if let Some(ref lbl) = label_lst.get(row as usize) {
+                        let LabelId(lbl_id) = lbl.id;
 
-                    let sel_lbl = selected_label_ids_c.lock();
+                        let sel_lbl = selected_label_ids_c.lock();
 
-                    let lbl_text = if sel_lbl.contains(&(lbl_id as u32)) {
-                        "X"
-                    } else {
-                        ""
-                    };
+                        let lbl_text = if sel_lbl.contains(&(lbl_id as u32)) {
+                            "X"
+                        } else {
+                            ""
+                        };
 
-                    match col {
-                        0 => draw_data(&lbl.name, x, y, w, h, selected, Align::Left),
-                        1 => draw_data(lbl_text, x, y, w, h, selected, Align::Right),
+                        match col {
+                            0 => draw_data(&lbl.name, x, y, w, h, selected, Align::Left),
+                            1 => draw_data(lbl_text, x, y, w, h, selected, Align::Right),
 
-                        _ => (),
-                    };
+                            _ => (),
+                        };
+                    }
                 }
                 _ => (),
             });
@@ -114,20 +115,21 @@ impl EntryLabelList {
             if btn == 1 {
                 let lens = lens.lock();
                 let labels_list = lens.get_labels();
-                let ref lbl = labels_list[lbl_ix];
-                let label_id: i32 = lbl.id.into();
-                let label_id: u32 = label_id as u32;
+                if let Some(ref lbl) = labels_list.get(lbl_ix) {
+                    let label_id: i32 = lbl.id.into();
+                    let label_id: u32 = label_id as u32;
 
-                let mut selected_label_ids = self.selected_label_ids.lock();
+                    let mut selected_label_ids = self.selected_label_ids.lock();
 
-                let lbl_is_selected = selected_label_ids.contains(&label_id);
+                    let lbl_is_selected = selected_label_ids.contains(&label_id);
 
-                if !lbl_is_selected {
-                    selected_label_ids.insert(label_id);
-                } else {
-                    selected_label_ids.remove(&label_id);
+                    if !lbl_is_selected {
+                        selected_label_ids.insert(label_id);
+                    } else {
+                        selected_label_ids.remove(&label_id);
+                    }
+                    return true;
                 }
-                return true;
             }
             return false;
         }

@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::sync::Arc;
 
 use fltk::table::*;
-use fltk::{prelude::*, enums::*, *};
+use fltk::{enums::*, prelude::*, *};
 
 use serious_organizer_lib::{
     lens::{Lens, Sort, SortColumn, SortOrder},
@@ -45,29 +45,52 @@ impl FileTable {
         table.wid.end();
         table.wid.set_rows(0);
 
-        let mut table_c = table.clone();
+        let table_c = table.clone();
 
         // let lens_c = table.lens.clone();
         let dir_id_c = table.dir_id.clone();
         table
             .wid
-            .draw_cell(move |_, ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
                 table::TableContext::Cell => {
                     let dir_id = dir_id_c.load(Ordering::Relaxed);
                     if dir_id >= 0 {
-                        let selected = table_c.row_selected(row);
-                        // let l = lens_c.lock();
-                        // let files = l.get_dir_files(dir_id as usize);
-                        // let ref files = table_c.files.lock();
+                        // let selected = table_c.row_selected(row);
+                        let selected = t.row_selected(row);
+
                         if let Some(files) = &*table_c.files.lock() {
-                            let row = row as usize;
-                            if row < files.len() {
-                                let file = &files[row as usize];
+                            if let Some(file) = files.get(row as usize) {
+                                // let mut all_bounds = true;
+                                // for i in 0..file.name.len() {
+                                //     if !file.name.is_char_boundary(i) {
+                                //         all_bounds = false;
+                                //     }
+                                // }
+                                // println!(
+                                //     "file draw {:?} {} {} row: {} len: {} boundry: {:?}",
+                                //     file.name,
+                                //     file.name.len(),
+                                //     file.name.chars().count(),
+                                //     row,
+                                //     files.len(),
+                                //     file.name.escape_default()
+                                // );
+                                
+                                let name = file.name.as_str();
+
+                                // let name = if all_bounds {
+                                //     file.name.as_str()
+                                // } else {
+                                //     "{Error}"
+                                // };
+
+                                // println!("Use name is error! {:?}", name);
+
                                 match col {
-                                    0 => draw_data(&file.name, x, y, w, h, selected, Align::Left),
+                                    0 => draw_data(name, x, y, w, h, selected, Align::Left),
                                     1 => draw_data(&file.path, x, y, w, h, selected, Align::Left),
                                     2 => draw_data(
                                         &pretty_size(file.size),

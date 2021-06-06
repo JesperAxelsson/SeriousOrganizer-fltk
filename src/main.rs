@@ -1,6 +1,8 @@
 use log::LevelFilter;
 use parking_lot::Mutex;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
+
+use std::fs::metadata;
 use std::{cell::RefCell, sync::Arc};
 
 use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::TableContext, window};
@@ -17,6 +19,7 @@ extern crate log;
 // mod counter;
 // mod layout;
 
+mod choice_dialog;
 mod entry_table;
 mod file_table;
 mod label;
@@ -24,6 +27,7 @@ mod location;
 mod rename_dialog;
 mod table_utils;
 
+use choice_dialog::ChoiceDialog;
 use entry_table::EntryTable;
 use file_table::FileTable;
 
@@ -208,13 +212,37 @@ fn main() {
 
         // Right click
         if evt == Event::Push && btn == 3 {
+            println!("Dir table get selected");
             let selection = dir_tbl_c.get_selected_index();
 
             if selection.len() > 0 {
                 println!("Context menu!");
 
-                let v = vec!["Add label", "Label >", "3rd val", "Rename Entry"];
-                let x = MenuItem::new(&v);
+                let entry_ix = selection.iter().next().unwrap();
+                let entry = {
+                    lens_c
+                        .lock()
+                        .get_dir_entry(*entry_ix as usize)
+                        .unwrap()
+                        .clone()
+                };
+
+                let meta = metadata(&entry.path).expect(&format!("Failed to find meta data for entry! path: {}", entry.path));
+
+                let choices = if meta.is_file() {
+                    vec![
+                        "Add label",
+                        "Label >",
+                        "3rd val",
+                        "Rename Entry",
+                        "Move to Dir",
+                    ]
+                } else {
+                    vec!["Add label", "Label >", "3rd val", "Rename Entry"]
+                };
+
+                let x = MenuItem::new(&choices);
+                // let x = MenuItem::new(&v);
                 match x.popup(app::event_x(), app::event_y()) {
                     None => println!("No value was chosen!"),
                     Some(val) => {
@@ -280,6 +308,31 @@ fn main() {
                             };
                             let dialog = rename_dialog::RenameDialog::new(lens_c.clone(), entry);
                             dialog.show();
+                            dir_tbl_c.update();
+                        }
+
+                        if val.label().unwrap() == "Move to Dir" {
+                            let entry_ix = selection.iter().next().unwrap();
+                            let entry = {
+                                lens_c
+                                    .lock()
+                                    .get_dir_entry(*entry_ix as usize)
+                                    .unwrap()
+                                    .clone()
+                            };
+
+                            let dialog = ChoiceDialog::new(
+                                format!("Move {:?} to a dir?", entry.path),
+                                vec!["Yes".to_string(), "No".to_string()],
+                            );
+
+                            dialog.show();
+                            if dialog.result() == 0 {
+                                lens_c.lock().move_file_entry_to_dir_entry(entry);
+                                dir_tbl_c.update();
+                            } else {
+                                println!("Abort dir thing");
+                            }
                         }
                     }
                 }
