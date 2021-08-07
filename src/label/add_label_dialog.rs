@@ -1,22 +1,25 @@
+use fltk::app::Sender;
 use fltk::{button::*, input::*, window::*};
-use fltk::{prelude::*, enums::*};
+use fltk::{enums::*, prelude::*};
 use serious_organizer_lib::lens::Lens;
 // use serious_organizer_lib::lens
 use parking_lot::Mutex;
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::sync::Arc;
+
+use crate::model::message::Message;
 
 pub struct AddLabelDialog {
     lens: Arc<Mutex<Lens>>,
     label: Arc<Mutex<Option<String>>>,
-    on_update: Rc<RefCell<dyn FnMut() -> ()>>,
+    sender: Sender<Message>,
 }
 
 impl AddLabelDialog {
-    pub fn new(lens: Arc<Mutex<Lens>>, on_update: Rc<RefCell<dyn FnMut() -> ()>>) -> Self {
+    pub fn new(lens: Arc<Mutex<Lens>>, sender: Sender<Message>) -> Self {
         AddLabelDialog {
             lens,
             label: Arc::new(Mutex::new(None)),
-            on_update,
+            sender,
         }
     }
 
@@ -31,7 +34,8 @@ impl AddLabelDialog {
         // Button save callback
         let lens_c = self.lens.clone();
         let label_c = self.label.clone();
-        let on_update = self.on_update.clone();
+        let sender_c = self.sender.clone();
+        // let on_update = self.on_update.clone();
         let mut dialog_c = dialog.clone();
         but_save.set_callback(move |_| {
             let lbl = label_c.lock();
@@ -41,7 +45,7 @@ impl AddLabelDialog {
                     lens.add_label(&name);
                 }
                 dialog_c.hide();
-                on_update.borrow_mut()();
+                sender_c.send(Message::LabelTableInvalidated);
             }
         });
         but_save.deactivate();

@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 
 use fltk::table::*;
-use fltk::{prelude::*, enums::*, *};
+use fltk::{enums::*, prelude::*, *};
 
 use serious_organizer_lib::lens::{Lens, Sort, SortColumn, SortOrder};
 
@@ -17,11 +17,7 @@ pub struct EntryTable {
 
 impl EntryTable {
     pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> EntryTable {
-        let headers = vec![
-            "Name".to_string(),
-            "Path".to_string(),
-            "Size".to_string(),
-        ];
+        let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
         let mut table = EntryTable {
             wid: TableRow::new(x, y, w, h, ""),
             lens,
@@ -51,7 +47,6 @@ impl EntryTable {
                 table::TableContext::Cell => {
                     let l = lens_c.lock();
                     if let Some(dir) = l.get_dir_entry(row as usize) {
-
                         let (data, align) = {
                             match col {
                                 0 => (dir.name.to_string(), Align::Left),
@@ -79,42 +74,34 @@ impl EntryTable {
         self.redraw();
     }
 
-    pub fn get_selected_index(&mut self) -> Vec<u32> {
-        let mut selected = Vec::new();
-
-        for ix in 0..self.rows() {
-            if self.row_selected(ix as i32) {
-                selected.push(ix as u32);
-            }
-        }
-        selected
-    }
-
     pub fn toggle_sort_column(&mut self, col_id: i32) {
-        let mut sort = self.col_sort.lock();
+        {
+            let mut sort = self.col_sort.lock();
 
-        let col = match col_id {
-            0 => SortColumn::Name,
-            1 => SortColumn::Path,
-            2 => SortColumn::Size,
-            _ => panic!("Trying to dir sort unknown column"),
-        };
+            let col = match col_id {
+                0 => SortColumn::Name,
+                1 => SortColumn::Path,
+                2 => SortColumn::Size,
+                _ => panic!("Trying to dir sort unknown column"),
+            };
 
-        let ord = if let Some(s) = &*sort {
-            if s.column == col && s.order == SortOrder::Asc {
-                SortOrder::Desc
+            let ord = if let Some(s) = &*sort {
+                if s.column == col && s.order == SortOrder::Asc {
+                    SortOrder::Desc
+                } else {
+                    SortOrder::Asc
+                }
             } else {
                 SortOrder::Asc
-            }
-        } else {
-            SortOrder::Asc
-        };
+            };
 
-        println!("Change sort column!");
+            println!("Change sort column!");
 
-        self.lens.lock().order_by(col, ord);
+            self.lens.lock().order_by(col, ord);
 
-        *sort = Some(Sort::new(col, ord));
+            *sort = Some(Sort::new(col, ord));
+        }
+        self.update();
     }
 }
 

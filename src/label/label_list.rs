@@ -1,5 +1,6 @@
+use fltk::app::Sender;
 use parking_lot::Mutex;
-use std::{cell::RefCell, sync::Arc};
+use std::sync::Arc;
 
 use fltk::table::*;
 use fltk::{enums::*, prelude::*, *};
@@ -7,15 +8,14 @@ use fltk::{enums::*, prelude::*, *};
 use serious_organizer_lib::lens::LabelState;
 use serious_organizer_lib::lens::Lens;
 
+use crate::model::message::Message;
 use crate::table_utils::{draw_data, draw_header};
-
-use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct LabelList {
     pub wid: TableRow,
     lens: Arc<Mutex<Lens>>,
-    pub on_update: Rc<RefCell<dyn FnMut() -> ()>>,
+    sender: Sender<Message>,
 }
 
 // use std::rc::Rc;
@@ -27,14 +27,14 @@ impl LabelList {
         w: i32,
         h: i32,
         lens: Arc<Mutex<Lens>>,
-        on_update: Rc<RefCell<dyn FnMut() -> ()>>,
+        sender: Sender<Message>,
     ) -> LabelList {
         let headers = vec!["Name".to_string(), "State".to_string()];
         // let x2 = dyn_clone::clone_box(&*on_update);
         let mut table = LabelList {
             wid: TableRow::new(x, y, w, h, ""),
             lens: lens,
-            on_update,
+            sender,
         };
 
         table.set_row_height_all(20);
@@ -50,9 +50,9 @@ impl LabelList {
 
         table.update_size();
 
-        // let lens_c = table.lens.clone();
-        // let mut table_c = table.clone();
-        // table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
+        let lens_c = table.lens.clone();
+        let mut table_c = table.clone();
+        table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
         println!("Setup label click handler");
 
         let lens_c = table.lens.clone();
@@ -99,25 +99,39 @@ impl LabelList {
     }
 
     pub fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
-        if self.callback_context() != TableContext::Cell {
+        if self.callback_context() != TableContext::Cell || evt == Event::NoEvent {
             return false;
         }
 
-        if app::event_is_click() && evt == Event::Push {
-            println!("Label got click: {:?} ", self.callback_context())
+        let is_inside = app::event_inside_widget(&self.wid);
+
+        if !is_inside {
+            if app::event_is_click()
+            //&& evt == Event::Released
+            {
+                println!("*******************************************************************");
+                println!(
+                    "***** Got event not inside label widget! {:?} {:?} ******",
+                    self.callback_context(),
+                    evt
+                );
+                println!("*******************************************************************");
+            }
+            return false;
+        }
+
+        if app::event_is_click() && evt == Event::Released {
+            println!(
+                "Label got click: {:?} inside: {} ",
+                self.callback_context(),
+                is_inside
+            );
         }
 
         if app::event_is_click()
-            && evt == Event::Push
+            && evt == Event::Released
             && self.callback_context() == TableContext::Cell
         {
-            // println!(
-            //     "LableList event: [{:?}] context: {:?} {:?}",
-            //     evt,
-            //     self.callback_context(),
-            //     self.callback_row()
-            // );
-
             let lbl_ix = self.callback_row() as usize;
             let state_change = {
                 let mut lens = lens.lock();
@@ -173,7 +187,7 @@ impl LabelList {
             };
 
             if state_change {
-                self.on_update.borrow_mut()();
+                self.sender.send(Message::EntryTableInvalidated);
                 return true;
             }
         }

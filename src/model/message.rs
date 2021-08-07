@@ -1,6 +1,7 @@
-
 #[derive(Debug, Copy, Clone)]
 pub enum Message {
-    Increment(i32),
-    Decrement(i32),
+    LabelTableInvalidated,
+    EntryTableInvalidated,
+    EntryTableSortCol(i32),
+    EntryChanged(usize),
 }

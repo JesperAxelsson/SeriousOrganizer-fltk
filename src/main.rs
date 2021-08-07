@@ -1,9 +1,10 @@
+use fltk::table::TableRow;
 use log::LevelFilter;
 use parking_lot::Mutex;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
 
 use std::fs::metadata;
-use std::{cell::RefCell, sync::Arc};
+use std::sync::Arc;
 
 use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::TableContext, window};
 use fltk::{enums::*, prelude::*};
@@ -25,9 +26,9 @@ mod error_dialog;
 mod file_table;
 mod label;
 mod location;
+mod model;
 mod rename_dialog;
 mod table_utils;
-mod model;
 
 use choice_dialog::ChoiceDialog;
 use entry_table::EntryTable;
@@ -40,6 +41,17 @@ use label::entry_label_dialog;
 use label::label_list;
 use location::location_dialog;
 use location::location_table;
+
+pub fn get_selected_index(table: &mut TableRow) -> Vec<u32> {
+    let mut selected = Vec::new();
+
+    for ix in 0..table.rows() {
+        if table.row_selected(ix as i32) {
+            selected.push(ix as u32);
+        }
+    }
+    selected
+}
 
 fn main() {
     info!("Starting");
@@ -100,16 +112,8 @@ fn main() {
     // table_col.set_type(group::PackType::Vertical);
     table_col.auto_layout();
 
-    use ::std::rc::Rc;
-    let mut dir_tbl_c = dir_tbl.clone();
-    let label_list = label_list::LabelList::new(
-        5,
-        5,
-        165,
-        h_size,
-        lens.clone(),
-        Rc::new(RefCell::new(move || dir_tbl_c.update())),
-    );
+    let sender_c = sender.clone();
+    let mut label_list = label_list::LabelList::new(5, 5, 135, h_size, lens.clone(), sender_c);
 
     table_row.resizable(&mut table_col);
     table_row.end();
@@ -155,18 +159,15 @@ fn main() {
 
     // Setup file table
     let file_tbl_c = file_tbl.clone();
-    let mut label_tbl_c = label_list.clone();
-    let label_update = Rc::new(RefCell::new(move || label_tbl_c.update()));
-    let lens_c = lens.clone();
     let mut last_click_started = false;
     file_tbl.handle(move |_, evt: Event| {
         if file_tbl_c.callback_context() != TableContext::Cell {
             return false;
         }
 
-        let btn = app::event_button();
+        let btn = app::event_mouse_button();
         // Left click
-        if evt == Event::Push && btn == 1 {
+        if evt == Event::Push && btn == app::MouseButton::Left {
             println!("Filetable Click!");
             if !app::event_clicks() {
                 last_click_started = false
@@ -183,7 +184,7 @@ fn main() {
         }
 
         // Right click
-        if evt == Event::Push && btn == 3 {
+        if evt == Event::Push && btn == app::MouseButton::Right {
             // println!("FL: {:?}, {:?}, {:?}", evt, app::event_clicks(), last_click_started);
             let path = file_tbl_c.get_selected_file_path();
             // println!("Event: {:?}, {:?}, {:?}", evt, app::event_clicks(), path);
@@ -196,13 +197,7 @@ fn main() {
                     None => println!("No value was chosen!"),
                     Some(val) => {
                         println!("{}", val.label().unwrap());
-                        if val.label().unwrap() == "1st val" {
-                            let dialog = add_label_dialog::AddLabelDialog::new(
-                                lens_c.clone(),
-                                label_update.clone(),
-                            );
-                            dialog.show();
-                        }
+                        if val.label().unwrap() == "1st val" {}
 
                         if val.label().unwrap() == "2st val" {
                             // let lens = lens_c.lock();
@@ -219,25 +214,21 @@ fn main() {
 
     // ** Setup Entry table **
 
-    let mut dir_tbl_c = dir_tbl.clone();
-    let mut file_tbl_c = file_tbl.clone();
-    let mut label_tbl_c = label_list.clone();
-    let label_update = Rc::new(RefCell::new(move || label_tbl_c.update()));
+    let sender_c = sender.clone();
     let lens_c = lens.clone();
-    dir_tbl.wid.handle(move |_, evt: Event| {
-        let btn = app::event_button();
+    dir_tbl.handle(move |dir_wid, evt: Event| {
+        let btn = app::event_mouse_button();
 
-        if evt == Event::Released && btn == 1 {
-            match dir_tbl_c.callback_context() {
+        if evt == Event::Released && btn == app::MouseButton::Left {
+            match dir_wid.callback_context() {
                 TableContext::ColHeader => {
                     println!("Handle Got colheader callback");
-                    dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
-                    dir_tbl_c.redraw();
+                    sender_c.send(Message::EntryTableSortCol(dir_wid.callback_col()));
                     return true;
                 }
                 TableContext::Cell => {
                     println!("Handle Got cell changed");
-                    file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
+                    sender_c.send(Message::EntryChanged(dir_wid.callback_row() as usize));
                     return true;
                 }
                 _ => (),
@@ -245,9 +236,13 @@ fn main() {
         }
 
         // Right click
-        if evt == Event::Push && btn == 3 && dir_tbl_c.callback_context() == TableContext::Cell {
+        if evt == Event::Push
+            && btn == app::MouseButton::Right
+            && dir_wid.callback_context() == TableContext::Cell
+        {
             println!("Dir table get selected");
-            let selection = dir_tbl_c.get_selected_index();
+            // let selection = dir_tbl_c.get_selected_index();
+            let selection = get_selected_index(dir_wid);
 
             if selection.len() > 0 {
                 println!("Context menu!");
@@ -287,15 +282,14 @@ fn main() {
                         if val.label().unwrap() == "Add label" {
                             let dialog = add_label_dialog::AddLabelDialog::new(
                                 lens_c.clone(),
-                                label_update.clone(),
+                                sender_c,
+                                // label_update.clone(),
                             );
                             dialog.show();
-                            label_update.borrow_mut()();
                         }
 
                         if val.label().unwrap() == "Label >" {
                             let mut entries = Vec::new();
-
                             {
                                 let lens = lens_c.lock();
                                 // Get selected entries
@@ -345,7 +339,7 @@ fn main() {
                             };
                             let dialog = rename_dialog::RenameDialog::new(lens_c.clone(), entry);
                             dialog.show();
-                            dir_tbl_c.update();
+                            sender_c.send(Message::LabelTableInvalidated);
                         }
 
                         if val.label().unwrap() == "Move to Dir" {
@@ -373,7 +367,7 @@ fn main() {
                                         err_dialog.show();
                                     }
                                 }
-                                dir_tbl_c.update();
+                                sender_c.send(Message::LabelTableInvalidated);
                             } else {
                                 println!("Abort dir thing");
                             }
@@ -403,24 +397,6 @@ fn main() {
         println!("Banan editing {} found: {}", input_c.value(), dir_count);
     });
 
-    // let mut dir_tbl_c = dir_tbl.clone();
-    // let mut file_tbl_c = file_tbl.clone();
-    // dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
-    // dir_tbl
-    //     .wid
-    //     .set_callback(move |_|
-    //         if dir
-    //         match dir_tbl_c.callback_context() {
-    //         TableContext::ColHeader => {
-    //             println!("Got colheader callback");
-    //             dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
-    //         }
-    //         TableContext::Cell => {
-    //             file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
-    //         }
-    //         _ => (),
-    //     });
-
     let mut file_tbl_c = file_tbl.clone();
     file_tbl.set_trigger(CallbackTrigger::Changed);
     file_tbl.set_callback(move |_| match file_tbl_c.callback_context() {
@@ -437,10 +413,10 @@ fn main() {
     // let mut dir_tbl_c = dir_tbl.clone();
 
     wind.handle(move |h_wnd, evt: Event| {
-        if evt == Event::NoEvent {
-            // println!("Wind NoEvent?!");
-            return true;
-        }
+        // if evt == Event::NoEvent {
+        //     // println!("Wind NoEvent?!");
+        //     return true;
+        // }
 
         if evt == Event::Activate {
             println!("Wind activate!");
@@ -454,7 +430,7 @@ fn main() {
 
         if evt == Event::Focus {
             h_wnd.redraw();
-            // println!("*** bgn");
+            println!("*** bgn");
             // println!(
             //     "Wind Focus! lbls: ({}, {})",
             //     dir_tbl_c.wid.x(), dir_tbl_c.wid.y()
@@ -470,5 +446,15 @@ fn main() {
         false
     });
 
-    app.run().unwrap();
+    // app.run().unwrap();
+    while app.wait() {
+        if let Some(msg) = reciever.recv() {
+            match msg {
+                Message::LabelTableInvalidated => label_list.update(),
+                Message::EntryChanged(ix) => file_tbl.set_dir_ix(ix),
+                Message::EntryTableInvalidated => dir_tbl.update(),
+                Message::EntryTableSortCol(col) => dir_tbl.toggle_sort_column(col),
+            }
+        }
+    }
 }
