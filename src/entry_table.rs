@@ -110,6 +110,8 @@ impl EntryTable {
             SortOrder::Asc
         };
 
+        println!("Change sort column!");
+
         self.lens.lock().order_by(col, ord);
 
         *sort = Some(Sort::new(col, ord));

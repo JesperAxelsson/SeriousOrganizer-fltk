@@ -94,7 +94,7 @@ impl LocationDialog {
                         _ => ("".to_string(), Align::Center),
                     }
                 } else {
-                    print!("Invalid location row: {}", row);
+                    println!("Invalid location row: {}", row);
                     ("".to_string(), Align::Center)
                 }
             }),

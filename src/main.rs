@@ -27,11 +27,13 @@ mod label;
 mod location;
 mod rename_dialog;
 mod table_utils;
+mod model;
 
 use choice_dialog::ChoiceDialog;
 use entry_table::EntryTable;
 use error_dialog::ErrorDialog;
 use file_table::FileTable;
+use model::message::Message;
 
 use label::add_label_dialog;
 use label::entry_label_dialog;
@@ -53,7 +55,9 @@ fn main() {
     let h_size: i32 = 800;
 
     let mut app = App::default();
-    app.set_scheme(app::AppScheme::Gtk);
+    app.set_scheme(app::AppScheme::Base);
+
+    let (sender, reciever) = app::channel::<Message>();
 
     let mut wind = window::Window::new(100, 100, w_size, h_size, "Serious Organizer");
     wind.make_resizable(true);
@@ -61,7 +65,7 @@ fn main() {
     println!("Setup app widgets");
     let mut hpack = group::Pack::new(5, 5, w_size - 10, h_size - 10, "");
 
-    let mut top_pack = group::Pack::new(5, 5, w_size, 25, "");
+    let mut top_pack = group::Pack::new(5, 5, w_size - 10, 25, "");
     let _spacer = frame::Frame::default().with_size(45, 25);
 
     let mut input = Input::new(0, 0, 200, 25, "Search");
@@ -74,16 +78,16 @@ fn main() {
 
     // Setup dir table
 
-    let mut table_row = group::Pack::new(0, 0, w_size, h_size, "");
+    let mut table_row = group::Pack::new(0, 0, w_size - 10, h_size - 10, "");
 
     let mut table_col = group::Pack::new(0, 0, w_size - 180, h_size, "");
 
     let lens_c = lens.clone();
-    let mut _spacer = frame::Frame::default().with_size(1, 1);
+    // let mut _spacer = frame::Frame::default().with_size(1, 1);
 
     let mut dir_tbl = EntryTable::new(5, 5, w_size - 180, 390, lens_c);
 
-    let mut _spacer = frame::Frame::default().with_size(1, 1);
+    // let mut _spacer = frame::Frame::default().with_size(1, 1);
 
     let mut file_tbl = FileTable::new(5, 5, w_size - 180, 260, lens.clone());
 
@@ -93,7 +97,8 @@ fn main() {
 
     table_col.end();
     table_col.set_spacing(5);
-    table_col.set_type(group::PackType::Vertical);
+    // table_col.set_type(group::PackType::Vertical);
+    table_col.auto_layout();
 
     use ::std::rc::Rc;
     let mut dir_tbl_c = dir_tbl.clone();
@@ -113,6 +118,15 @@ fn main() {
     table_row.auto_layout();
 
     hpack.resizable(&mut table_row);
+
+    hpack.end();
+    hpack.set_spacing(10);
+    // hpack.set_type(group::PackType::Vertical);
+
+    wind.end();
+    wind.show();
+
+    // *** End of widget contruction ***
 
     let lens_c = lens.clone();
 
@@ -153,7 +167,7 @@ fn main() {
         let btn = app::event_button();
         // Left click
         if evt == Event::Push && btn == 1 {
-            println!("Click!");
+            println!("Filetable Click!");
             if !app::event_clicks() {
                 last_click_started = false
             }
@@ -203,17 +217,35 @@ fn main() {
         false
     });
 
-    // Setup Entry table
+    // ** Setup Entry table **
 
     let mut dir_tbl_c = dir_tbl.clone();
+    let mut file_tbl_c = file_tbl.clone();
     let mut label_tbl_c = label_list.clone();
     let label_update = Rc::new(RefCell::new(move || label_tbl_c.update()));
     let lens_c = lens.clone();
-    dir_tbl.handle(move |_, evt: Event| {
+    dir_tbl.wid.handle(move |_, evt: Event| {
         let btn = app::event_button();
 
+        if evt == Event::Released && btn == 1 {
+            match dir_tbl_c.callback_context() {
+                TableContext::ColHeader => {
+                    println!("Handle Got colheader callback");
+                    dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
+                    dir_tbl_c.redraw();
+                    return true;
+                }
+                TableContext::Cell => {
+                    println!("Handle Got cell changed");
+                    file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
+                    return true;
+                }
+                _ => (),
+            }
+        }
+
         // Right click
-        if evt == Event::Push && btn == 3 {
+        if evt == Event::Push && btn == 3 && dir_tbl_c.callback_context() == TableContext::Cell {
             println!("Dir table get selected");
             let selection = dir_tbl_c.get_selected_index();
 
@@ -229,7 +261,10 @@ fn main() {
                         .clone()
                 };
 
-                let meta = metadata(&entry.path).expect(&format!("Failed to find meta data for entry! path: {}", entry.path));
+                let meta = metadata(&entry.path).expect(&format!(
+                    "Failed to find meta data for entry! path: {}",
+                    entry.path
+                ));
 
                 let choices = if meta.is_file() {
                     vec![
@@ -368,20 +403,23 @@ fn main() {
         println!("Banan editing {} found: {}", input_c.value(), dir_count);
     });
 
-    let mut dir_tbl_c = dir_tbl.clone();
-    let mut file_tbl_c = file_tbl.clone();
-    dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
-    dir_tbl
-        .wid
-        .set_callback(move |_| match dir_tbl_c.callback_context() {
-            TableContext::ColHeader => {
-                dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
-            }
-            TableContext::Cell => {
-                file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
-            }
-            _ => (),
-        });
+    // let mut dir_tbl_c = dir_tbl.clone();
+    // let mut file_tbl_c = file_tbl.clone();
+    // dir_tbl.wid.set_trigger(CallbackTrigger::Changed);
+    // dir_tbl
+    //     .wid
+    //     .set_callback(move |_|
+    //         if dir
+    //         match dir_tbl_c.callback_context() {
+    //         TableContext::ColHeader => {
+    //             println!("Got colheader callback");
+    //             dir_tbl_c.toggle_sort_column(dir_tbl_c.callback_col());
+    //         }
+    //         TableContext::Cell => {
+    //             file_tbl_c.set_dir_ix(dir_tbl_c.callback_row() as usize);
+    //         }
+    //         _ => (),
+    //     });
 
     let mut file_tbl_c = file_tbl.clone();
     file_tbl.set_trigger(CallbackTrigger::Changed);
@@ -395,11 +433,42 @@ fn main() {
         _ => (),
     });
 
-    hpack.end();
-    hpack.set_spacing(10);
-    hpack.set_type(group::PackType::Vertical);
+    // let label_list_c = label_list.clone();
+    // let mut dir_tbl_c = dir_tbl.clone();
 
-    wind.end();
-    wind.show();
+    wind.handle(move |h_wnd, evt: Event| {
+        if evt == Event::NoEvent {
+            // println!("Wind NoEvent?!");
+            return true;
+        }
+
+        if evt == Event::Activate {
+            println!("Wind activate!");
+            return true;
+        }
+
+        if evt == Event::Deactivate {
+            println!("Wind Deactivate!");
+            return true;
+        }
+
+        if evt == Event::Focus {
+            h_wnd.redraw();
+            // println!("*** bgn");
+            // println!(
+            //     "Wind Focus! lbls: ({}, {})",
+            //     dir_tbl_c.wid.x(), dir_tbl_c.wid.y()
+            // );
+            // println!(
+            //     "Wind Focus! lbls: ({}, {})",
+            //     label_list_c.wid.x(), label_list_c.wid.y()
+            // );
+            // println!("*** end");
+            return true;
+        }
+
+        false
+    });
+
     app.run().unwrap();
 }

@@ -15,7 +15,7 @@ use std::rc::Rc;
 pub struct LabelList {
     pub wid: TableRow,
     lens: Arc<Mutex<Lens>>,
-    on_update: Rc<RefCell<dyn FnMut() -> ()>>,
+    pub on_update: Rc<RefCell<dyn FnMut() -> ()>>,
 }
 
 // use std::rc::Rc;
@@ -50,9 +50,9 @@ impl LabelList {
 
         table.update_size();
 
-        let lens_c = table.lens.clone();
-        let mut table_c = table.clone();
-        table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
+        // let lens_c = table.lens.clone();
+        // let mut table_c = table.clone();
+        // table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
         println!("Setup label click handler");
 
         let lens_c = table.lens.clone();
@@ -98,9 +98,17 @@ impl LabelList {
         self.set_rows(label_count as i32);
     }
 
-    fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
+    pub fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
+        if self.callback_context() != TableContext::Cell {
+            return false;
+        }
+
+        if app::event_is_click() && evt == Event::Push {
+            println!("Label got click: {:?} ", self.callback_context())
+        }
+
         if app::event_is_click()
-            && evt == Event::Released
+            && evt == Event::Push
             && self.callback_context() == TableContext::Cell
         {
             // println!(
@@ -123,7 +131,12 @@ impl LabelList {
 
                     // Left click
                     if btn == 1 {
-                        println!("Mouse left clicked {:?} {:?}", lbl.state, lbl.name);
+                        println!(
+                            "Mouse left clicked {:?} {:?} {:?}",
+                            lbl.state,
+                            lbl.name,
+                            self.callback_context()
+                        );
 
                         match lbl.state {
                             LabelState::Unset => lens.add_inlude_label(label_id),
@@ -136,7 +149,12 @@ impl LabelList {
 
                     // Right click
                     } else if btn == 3 {
-                        println!("Mouse right clicked {:?} {:?}", lbl.state, lbl.name);
+                        println!(
+                            "Mouse right clicked {:?} {:?} {:?}",
+                            lbl.state,
+                            lbl.name,
+                            self.callback_context()
+                        );
 
                         match lbl.state {
                             LabelState::Unset => lens.add_exclude_label(label_id),
