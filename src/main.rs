@@ -21,6 +21,7 @@ extern crate log;
 
 mod choice_dialog;
 mod entry_table;
+mod error_dialog;
 mod file_table;
 mod label;
 mod location;
@@ -29,6 +30,7 @@ mod table_utils;
 
 use choice_dialog::ChoiceDialog;
 use entry_table::EntryTable;
+use error_dialog::ErrorDialog;
 use file_table::FileTable;
 
 use label::add_label_dialog;
@@ -328,7 +330,14 @@ fn main() {
 
                             dialog.show();
                             if dialog.result() == 0 {
-                                lens_c.lock().move_file_entry_to_dir_entry(entry);
+                                {
+                                    let result = lens_c.lock().move_file_entry_to_dir_entry(entry);
+                                    if let Err(err) = result {
+                                        println!("Error while renaming file: {:?}", err);
+                                        let err_dialog = ErrorDialog::new(err.to_string());
+                                        err_dialog.show();
+                                    }
+                                }
                                 dir_tbl_c.update();
                             } else {
                                 println!("Abort dir thing");

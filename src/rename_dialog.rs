@@ -1,12 +1,13 @@
 use fltk::frame::Frame;
 use fltk::{button::*, input::*, window::*};
 use fltk::{enums::*, prelude::*};
-use serious_organizer_lib::lens::Lens;
-// use serious_organizer_lib::lens
 use parking_lot::Mutex;
+use serious_organizer_lib::lens::Lens;
 use serious_organizer_lib::models::Entry;
 use std::path::Path;
 use std::sync::Arc;
+
+use crate::error_dialog::ErrorDialog;
 
 pub struct RenameDialog {
     lens: Arc<Mutex<Lens>>,
@@ -51,12 +52,14 @@ impl RenameDialog {
             let lbl = label_c.lock();
             if let Some(ref name) = *lbl {
                 {
-                    // let path = Path::new(&entry_c.path);
-                    // let path = path.with_file_name(name);
-                    // let new_path = path.to_string_lossy();
                     println!("Rename from {} to {}", entry_c.name, &name);
                     let mut lens = lens_c.lock();
-                    lens.rename_entry(entry_c.clone(), &name);
+                    let result = lens.rename_entry(entry_c.clone(), &name);
+                    if let Err(err) = result {
+                        println!("Error while renaming file: {:?}", err);
+                        let err_dialog = ErrorDialog::new(err.to_string());
+                        err_dialog.show();
+                    }
                 }
                 dialog_c.hide();
             }
