@@ -23,10 +23,10 @@ pub struct FileTable {
 }
 
 impl FileTable {
-    pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> FileTable {
+    pub fn new( w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> FileTable {
         let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
         let mut table = FileTable {
-            wid: TableRow::new(x, y, w, h, ""),
+            wid: TableRow::default().with_size(w, h),
             lens: lens,
             dir_id: Arc::new(AtomicIsize::new(-1)),
             file_id: Arc::new(AtomicIsize::new(-1)),

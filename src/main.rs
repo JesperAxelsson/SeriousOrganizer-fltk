@@ -75,33 +75,34 @@ fn main() {
     wind.make_resizable(true);
 
     println!("Setup app widgets");
-    let mut hpack = group::Pack::new(5, 5, w_size - 10, h_size - 10, "");
+    let mut hpack = group::Pack::default().with_size(w_size - 10, h_size - 10);
 
-    let mut top_pack = group::Pack::new(5, 5, w_size - 10, 25, "");
+    let mut top_pack = group::Pack::default().with_size(w_size - 10, 25);
     let _spacer = frame::Frame::default().with_size(45, 25);
 
-    let mut input = Input::new(0, 0, 200, 25, "Search");
-    let mut but_reload = Button::new(0, 0, 60, 25, "Reload");
-    let mut but = Button::new(0, 0, 80, 25, "Locations");
+    let mut input = Input::default().with_size(200, 25).with_label("Search");
+    let mut but_reload = Button::default().with_size(60, 25).with_label("Reload");
+    let mut but = Button::default().with_size(80, 25).with_label("Locations");
 
     top_pack.end();
     top_pack.set_spacing(10);
     top_pack.set_type(group::PackType::Horizontal);
 
     // Setup dir table
+    let label_width = 135;
 
-    let mut table_row = group::Pack::new(0, 0, w_size - 10, h_size - 10, "");
+    let mut table_row = group::Pack::default().with_size(w_size - 10, h_size - 10);
 
-    let mut table_col = group::Pack::new(0, 0, w_size - 180, h_size, "");
+    let mut table_col = group::Pack::default().with_size(w_size - label_width - 10, h_size);
 
     let lens_c = lens.clone();
     // let mut _spacer = frame::Frame::default().with_size(1, 1);
 
-    let mut dir_tbl = EntryTable::new(5, 5, w_size - 180, 390, lens_c);
+    let mut dir_tbl = EntryTable::new(w_size - label_width - 10, 390, lens_c);
 
     // let mut _spacer = frame::Frame::default().with_size(1, 1);
 
-    let mut file_tbl = FileTable::new(5, 5, w_size - 180, 260, lens.clone());
+    let mut file_tbl = FileTable::new(w_size - label_width - 10, 260, lens.clone());
 
     table_col.resizable(&mut dir_tbl.wid);
     table_col.resizable(&mut file_tbl.wid);
@@ -113,7 +114,7 @@ fn main() {
     table_col.auto_layout();
 
     let sender_c = sender.clone();
-    let mut label_list = label_list::LabelList::new(5, 5, 135, h_size, lens.clone(), sender_c);
+    let mut label_list = label_list::LabelList::new(label_width, h_size, lens.clone(), sender_c);
 
     table_row.resizable(&mut table_col);
     table_row.end();

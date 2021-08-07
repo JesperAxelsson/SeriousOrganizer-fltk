@@ -21,18 +21,11 @@ pub struct LabelList {
 // use std::rc::Rc;
 
 impl LabelList {
-    pub fn new(
-        x: i32,
-        y: i32,
-        w: i32,
-        h: i32,
-        lens: Arc<Mutex<Lens>>,
-        sender: Sender<Message>,
-    ) -> LabelList {
+    pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>, sender: Sender<Message>) -> LabelList {
         let headers = vec!["Name".to_string(), "State".to_string()];
         // let x2 = dyn_clone::clone_box(&*on_update);
         let mut table = LabelList {
-            wid: TableRow::new(x, y, w, h, ""),
+            wid: TableRow::default().with_size(w, h),
             lens: lens,
             sender,
         };

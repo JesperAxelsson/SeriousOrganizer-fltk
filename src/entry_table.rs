@@ -16,10 +16,10 @@ pub struct EntryTable {
 }
 
 impl EntryTable {
-    pub fn new(x: i32, y: i32, w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> EntryTable {
+    pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> EntryTable {
         let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
         let mut table = EntryTable {
-            wid: TableRow::new(x, y, w, h, ""),
+            wid: TableRow::default().with_size(w, h),
             lens,
             col_sort: Arc::new(Mutex::new(None)),
         };
