@@ -104,9 +104,12 @@ impl EntryLabelList {
     }
 
     fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
-        if app::event_is_click()
-            && evt == Event::Push
-            && self.callback_context() == TableContext::Cell
+        
+        // if app::event_is_click()
+        //     && evt == Event::Push
+        //     && self.callback_context() == TableContext::Cell
+        let btn = app::event_mouse_button();
+        if evt == Event::Released && btn == app::MouseButton::Left 
         {
             let lbl_ix = self.callback_row() as usize;
             let btn = app::event_button();

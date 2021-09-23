@@ -1,6 +1,6 @@
 use fltk::{button::*, window::*};
 
-use fltk::{prelude::*};
+use fltk::prelude::*;
 
 use serious_organizer_lib::{lens::Lens, models::LabelId};
 // use serious_organizer_lib::lens
@@ -42,14 +42,14 @@ impl EntryLabelDialog {
     }
 
     pub fn show(&self) {
-        let mut dialog = Window::new(300, 100, 190, 260, "Select Labels");
+        let mut dialog = Window::new(300, 100, 210, 260, "Select Labels");
         dialog.make_modal(true);
         println!("Make modal");
         let mut but_save = Button::new(10, 10, 60, 25, "Save");
         let mut but_delete = Button::new(80, 10, 60, 25, "Cancel");
 
         let lens_c = self.lens.clone();
-        let lbl_table = EntryLabelList::new(10, 50, 170, 205, lens_c, self.select_labels.clone());
+        let lbl_table = EntryLabelList::new(10, 50, 200, 205, lens_c, self.select_labels.clone());
 
         // Button save callback
         let entry_ids_c = self.entry_ids.clone();
@@ -118,7 +118,8 @@ impl EntryLabelDialog {
 
         dialog.end();
         dialog.show();
-
+        dialog.make_current();
+        
         while dialog.shown() {
             let _ = fltk::app::wait();
         }

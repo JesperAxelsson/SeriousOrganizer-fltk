@@ -69,8 +69,12 @@ impl EntryTable {
     // }
 
     pub fn update(&mut self) {
+        println!("Entry table upate");
         let dir_count = { self.lens.lock().get_dir_count() as i32 };
         self.set_rows(dir_count);
+        self.set_damage(true);
+        self.set_damage_type(Damage::all());
+        self.set_changed();
         self.redraw();
     }
 

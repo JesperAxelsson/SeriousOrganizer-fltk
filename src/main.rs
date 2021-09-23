@@ -216,7 +216,7 @@ fn main() {
     // ** Setup Entry table **
 
     let sender_c = sender.clone();
-    let lens_c = lens.clone();
+    // let lens_c = lens.clone();
     dir_tbl.handle(move |dir_wid, evt: Event| {
         let btn = app::event_mouse_button();
 
@@ -242,142 +242,10 @@ fn main() {
             && dir_wid.callback_context() == TableContext::Cell
         {
             println!("Dir table get selected");
-            // let selection = dir_tbl_c.get_selected_index();
+
             let selection = get_selected_index(dir_wid);
-
-            if selection.len() > 0 {
-                println!("Context menu!");
-
-                let entry_ix = selection.iter().next().unwrap();
-                let entry = {
-                    lens_c
-                        .lock()
-                        .get_dir_entry(*entry_ix as usize)
-                        .unwrap()
-                        .clone()
-                };
-
-                let meta = metadata(&entry.path).expect(&format!(
-                    "Failed to find meta data for entry! path: {}",
-                    entry.path
-                ));
-
-                let choices = if meta.is_file() {
-                    vec![
-                        "Add label",
-                        "Label >",
-                        "3rd val",
-                        "Rename Entry",
-                        "Move to Dir",
-                    ]
-                } else {
-                    vec!["Add label", "Label >", "3rd val", "Rename Entry"]
-                };
-
-                let x = MenuItem::new(&choices);
-                // let x = MenuItem::new(&v);
-                match x.popup(app::event_x(), app::event_y()) {
-                    None => println!("No value was chosen!"),
-                    Some(val) => {
-                        println!("{}", val.label().unwrap());
-                        if val.label().unwrap() == "Add label" {
-                            let dialog = add_label_dialog::AddLabelDialog::new(
-                                lens_c.clone(),
-                                sender_c,
-                                // label_update.clone(),
-                            );
-                            dialog.show();
-                        }
-
-                        if val.label().unwrap() == "Label >" {
-                            let mut entries = Vec::new();
-                            {
-                                let lens = lens_c.lock();
-                                // Get selected entries
-                                for ix in selection.iter() {
-                                    if let Some(dir_entry) = lens.get_dir_entry(*ix as usize) {
-                                        let EntryId(id) = dir_entry.id;
-                                        println!("Convert ix {} to {}", ix, id);
-                                        entries.push(id as u32);
-                                    }
-                                }
-                            }
-
-                            println!("Got entries: {:?}", entries);
-
-                            // Label select dialog
-                            let dialog = entry_label_dialog::EntryLabelDialog::new(
-                                lens_c.clone(),
-                                entries,
-                                // label_update.clone(),
-                            );
-
-                            dialog.show();
-                        }
-
-                        if val.label().unwrap() == "3rd val" {
-                            let mut lens = lens_c.lock();
-                            let mut entries = Vec::new();
-
-                            for ix in selection.iter() {
-                                if let Some(e) = lens.get_dir_entry(*ix as usize) {
-                                    let id: i32 = e.id.into();
-                                    entries.push(id as u32);
-                                }
-                            }
-
-                            lens.remove_entry_labels(entries, vec![2])
-                        }
-
-                        if val.label().unwrap() == "Rename Entry" {
-                            let entry_ix = selection.iter().next().unwrap();
-                            let entry = {
-                                lens_c
-                                    .lock()
-                                    .get_dir_entry(*entry_ix as usize)
-                                    .unwrap()
-                                    .clone()
-                            };
-                            let dialog = rename_dialog::RenameDialog::new(lens_c.clone(), entry);
-                            dialog.show();
-                            sender_c.send(Message::LabelTableInvalidated);
-                        }
-
-                        if val.label().unwrap() == "Move to Dir" {
-                            let entry_ix = selection.iter().next().unwrap();
-                            let entry = {
-                                lens_c
-                                    .lock()
-                                    .get_dir_entry(*entry_ix as usize)
-                                    .unwrap()
-                                    .clone()
-                            };
-
-                            let dialog = ChoiceDialog::new(
-                                format!("Move {:?} to a dir?", entry.path),
-                                vec!["Yes".to_string(), "No".to_string()],
-                            );
-
-                            dialog.show();
-                            if dialog.result() == 0 {
-                                {
-                                    let result = lens_c.lock().move_file_entry_to_dir_entry(entry);
-                                    if let Err(err) = result {
-                                        println!("Error while renaming file: {:?}", err);
-                                        let err_dialog = ErrorDialog::new(err.to_string());
-                                        err_dialog.show();
-                                    }
-                                }
-                                sender_c.send(Message::LabelTableInvalidated);
-                            } else {
-                                println!("Abort dir thing");
-                            }
-                        }
-                    }
-                }
-
-                return true;
-            }
+            sender_c.send(Message::EntryShowContextMenu(selection));
+            return true;
         }
         false
     });
@@ -421,12 +289,12 @@ fn main() {
 
         if evt == Event::Activate {
             println!("Wind activate!");
-            return true;
+            // return true;
         }
 
         if evt == Event::Deactivate {
             println!("Wind Deactivate!");
-            return true;
+            // return true;
         }
 
         if evt == Event::Focus {
@@ -455,6 +323,145 @@ fn main() {
                 Message::EntryChanged(ix) => file_tbl.set_dir_ix(ix),
                 Message::EntryTableInvalidated => dir_tbl.update(),
                 Message::EntryTableSortCol(col) => dir_tbl.toggle_sort_column(col),
+                Message::EntryShowContextMenu(selection) => {
+                    if selection.len() > 0 {
+                        println!("Context menu!");
+
+                        let entry_ix = selection.iter().next().unwrap();
+                        let entry = {
+                            lens.lock()
+                                .get_dir_entry(*entry_ix as usize)
+                                .unwrap()
+                                .clone()
+                        };
+
+                        let meta = metadata(&entry.path).expect(&format!(
+                            "Failed to find meta data for entry! path: {}",
+                            entry.path
+                        ));
+
+                        let choices = if meta.is_file() {
+                            vec![
+                                "Add label",
+                                "Label >",
+                                // "3rd val",
+                                "Rename Entry",
+                                "Move to Dir",
+                            ]
+                        } else {
+                            vec!["Add label", "Label >",
+                            //  "3rd val",
+                              "Rename Entry"]
+                        };
+
+                        let x = MenuItem::new(&choices);
+                        // let x = MenuItem::new(&v);
+                        match x.popup(app::event_x(), app::event_y()) {
+                            None => println!("No value was chosen!"),
+                            Some(val) => {
+                                println!("{}", val.label().unwrap());
+                                if val.label().unwrap() == "Add label" {
+                                    let dialog = add_label_dialog::AddLabelDialog::new(
+                                        lens.clone(),
+                                        sender.clone(),
+                                        // label_update.clone(),
+                                    );
+                                    dialog.show();
+                                }
+
+                                if val.label().unwrap() == "Label >" {
+                                    let mut entries = Vec::new();
+                                    {
+                                        let lens = lens.lock();
+                                        // Get selected entries
+                                        for ix in selection.iter() {
+                                            if let Some(dir_entry) =
+                                                lens.get_dir_entry(*ix as usize)
+                                            {
+                                                let EntryId(id) = dir_entry.id;
+                                                println!("Convert ix {} to {}", ix, id);
+                                                entries.push(id as u32);
+                                            }
+                                        }
+                                    }
+
+                                    println!("Got entries: {:?}", entries);
+
+                                    // Label select dialog
+                                    let dialog = entry_label_dialog::EntryLabelDialog::new(
+                                        lens.clone(),
+                                        entries,
+                                        // label_update.clone(),
+                                    );
+
+                                    wind.deactivate();
+                                    dialog.show();
+                                    wind.activate();
+                                    sender.send(Message::EntryTableInvalidated);
+                                }
+
+                                // if val.label().unwrap() == "3rd val" {
+                                //     let mut lens = lens.lock();
+                                //     let mut entries = Vec::new();
+
+                                //     for ix in selection.iter() {
+                                //         if let Some(e) = lens.get_dir_entry(*ix as usize) {
+                                //             let id: i32 = e.id.into();
+                                //             entries.push(id as u32);
+                                //         }
+                                //     }
+
+                                //     lens.remove_entry_labels(entries, vec![2])
+                                // }
+
+                                if val.label().unwrap() == "Rename Entry" {
+                                    let entry_ix = selection.iter().next().unwrap();
+                                    let entry = {
+                                        lens.lock()
+                                            .get_dir_entry(*entry_ix as usize)
+                                            .unwrap()
+                                            .clone()
+                                    };
+                                    let dialog =
+                                        rename_dialog::RenameDialog::new(lens.clone(), entry);
+                                    dialog.show();
+                                    sender.send(Message::EntryTableInvalidated);
+                                }
+
+                                if val.label().unwrap() == "Move to Dir" {
+                                    let entry_ix = selection.iter().next().unwrap();
+                                    let entry = {
+                                        lens.lock()
+                                            .get_dir_entry(*entry_ix as usize)
+                                            .unwrap()
+                                            .clone()
+                                    };
+
+                                    let dialog = ChoiceDialog::new(
+                                        format!("Move {:?} to a dir?", entry.path),
+                                        vec!["Yes".to_string(), "No".to_string()],
+                                    );
+
+                                    dialog.show();
+                                    if dialog.result() == 0 {
+                                        {
+                                            let result =
+                                                lens.lock().move_file_entry_to_dir_entry(entry);
+                                            if let Err(err) = result {
+                                                println!("Error while renaming file: {:?}", err);
+                                                let err_dialog = ErrorDialog::new(err.to_string());
+                                                err_dialog.show();
+                                            }
+                                        }
+                                        sender.send(Message::EntryTableInvalidated);
+                                    } else {
+                                        println!("Abort dir thing");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
