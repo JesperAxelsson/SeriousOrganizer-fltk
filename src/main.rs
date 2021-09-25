@@ -75,9 +75,12 @@ fn main() {
     wind.make_resizable(true);
 
     println!("Setup app widgets");
-    let mut hpack = group::Pack::default().with_size(w_size - 10, h_size - 10);
+
+    let mut col = group::Flex::default_fill().column();
+    col.set_margin(10);
 
     let mut top_pack = group::Pack::default().with_size(w_size - 10, 25);
+
     let _spacer = frame::Frame::default().with_size(45, 25);
 
     let mut input = Input::default().with_size(200, 25).with_label("Search");
@@ -87,46 +90,36 @@ fn main() {
     top_pack.end();
     top_pack.set_spacing(10);
     top_pack.set_type(group::PackType::Horizontal);
+    col.set_size(&mut top_pack, 25);
 
     // Setup dir table
-    let label_width = 135;
+    let label_width = 195;
 
-    let mut table_row = group::Pack::default().with_size(w_size - 10, h_size - 10);
+    let mut table_row = group::Flex::default_fill().row();
 
-    let mut table_col = group::Pack::default().with_size(w_size - label_width - 10, h_size);
+    let mut table_col = group::Flex::default_fill().column();
+
 
     let lens_c = lens.clone();
-    // let mut _spacer = frame::Frame::default().with_size(1, 1);
 
     let mut dir_tbl = EntryTable::new(w_size - label_width - 10, 390, lens_c);
-
-    // let mut _spacer = frame::Frame::default().with_size(1, 1);
 
     let mut file_tbl = FileTable::new(w_size - label_width - 10, 260, lens.clone());
 
     table_col.resizable(&mut dir_tbl.wid);
     table_col.resizable(&mut file_tbl.wid);
-    // table_col.resizable(&mut _spacer);
 
     table_col.end();
-    table_col.set_spacing(5);
-    // table_col.set_type(group::PackType::Vertical);
-    table_col.auto_layout();
 
     let sender_c = sender.clone();
     let mut label_list = label_list::LabelList::new(label_width, h_size, lens.clone(), sender_c);
 
+    table_row.set_size(&mut label_list.wid, label_width);
+
     table_row.resizable(&mut table_col);
     table_row.end();
-    table_row.set_spacing(10);
-    table_row.set_type(group::PackType::Horizontal);
-    table_row.auto_layout();
 
-    hpack.resizable(&mut table_row);
-
-    hpack.end();
-    hpack.set_spacing(10);
-    // hpack.set_type(group::PackType::Vertical);
+    col.end();
 
     wind.end();
     wind.show();
@@ -349,9 +342,12 @@ fn main() {
                                 "Move to Dir",
                             ]
                         } else {
-                            vec!["Add label", "Label >",
-                            //  "3rd val",
-                              "Rename Entry"]
+                            vec![
+                                "Add label",
+                                "Label >",
+                                //  "3rd val",
+                                "Rename Entry",
+                            ]
                         };
 
                         let x = MenuItem::new(&choices);
