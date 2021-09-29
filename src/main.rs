@@ -4,7 +4,7 @@ use log::LevelFilter;
 use parking_lot::Mutex;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
 
-use std::fs::metadata;
+use std::fs::{self, metadata, File};
 use std::sync::Arc;
 
 use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::TableContext, window};
@@ -54,6 +54,49 @@ pub fn get_selected_index(table: &mut TableRow) -> Vec<u32> {
     selected
 }
 
+#[cfg(debug_assertions)]
+fn get_dir_path() -> String {
+    ::std::env::current_exe()
+        .unwrap()
+        .with_file_name("test.sqlite3")
+        .to_string_lossy()
+        .to_string()
+}
+
+#[cfg(not(debug_assertions))]
+fn get_dir_path() -> String {
+    use directories::BaseDirs;
+
+    if let Some(base_dirs) = BaseDirs::new() {
+        let dir = base_dirs.data_dir();
+        let mut dir = dir.to_path_buf();
+        dir.push("SeriousOrganizer");
+        println!("Got base dir!");
+        fs::create_dir_all(&dir).expect(&format!(
+            "Failed to create data dir: {}",
+            dir.to_string_lossy()
+        ));
+
+        dir.push("Database.sqlite3");
+
+        if !dir.exists() {
+            File::create(&dir).expect(&format!(
+                "Failed to create db_file: {:?}",
+                dir.to_string_lossy()
+            ));
+        }
+
+        dir.to_string_lossy().to_string()
+    } else {
+        println!("No base dir! :'(");
+        ::std::env::current_exe()
+            .unwrap()
+            .with_file_name("test.sqlite3")
+            .to_string_lossy()
+            .to_string()
+    }
+}
+
 fn main() {
     info!("Starting");
     CombinedLogger::init(vec![
@@ -62,7 +105,9 @@ fn main() {
     ])
     .unwrap();
 
-    let lens = Arc::new(Mutex::new(Lens::new()));
+    let db_path = get_dir_path();
+    println!("dbpath: {}", db_path);
+    let lens = Arc::new(Mutex::new(Lens::new(&db_path)));
 
     let w_size: i32 = 715;
     let h_size: i32 = 800;

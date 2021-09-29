@@ -23,7 +23,7 @@ pub struct FileTable {
 }
 
 impl FileTable {
-    pub fn new( w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> FileTable {
+    pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> FileTable {
         let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
         let mut table = FileTable {
             wid: TableRow::default().with_size(w, h),
@@ -78,7 +78,7 @@ impl FileTable {
                                 //     files.len(),
                                 //     file.name.escape_default()
                                 // );
-                                
+
                                 let name = file.name.as_str();
 
                                 // let name = if all_bounds {
@@ -115,30 +115,35 @@ impl FileTable {
     }
 
     pub fn set_dir_ix(&mut self, new_id: usize) {
-        println!("Got new dir id: {}", new_id);
+        let lens = &*self.lens.lock();
+
+        let new_ix = lens.convert_ix(new_id);
+        println!("Got new dir id: {:?}", new_ix);
         let old_id = self.dir_id.load(Ordering::Relaxed);
         let new_id_i = new_id as isize;
-        println!("Got old dir id: {:?}", old_id);
 
-        if old_id != new_id_i {
-            self.dir_id.store(new_id_i, Ordering::Relaxed);
+        let old_ix = lens.convert_ix(old_id as usize);
+        println!("Got old dir id: {:?}", old_ix);
 
-            // get_dir_count
-            let lens = &*self.lens.lock();
-            {
-                *self.files.lock() = lens.get_dir_files(new_id).cloned();
-            }
+        // if old_id != new_id_i {
+        self.dir_id.store(new_id_i, Ordering::Relaxed);
 
-            self.sort_by_column();
+        // get_dir_count
+        // let lens = &*self.lens.lock();
+        {
+            *self.files.lock() = lens.get_dir_files(new_id).cloned();
+        }
 
-            if new_id < lens.get_dir_count() {
-                if let Some(len) = lens.get_file_count(new_id) {
-                    self.wid.set_rows(len as i32);
-                    self.wid.redraw();
-                    // println!("Redrawing, len {}", len);
-                }
+        self.sort_by_column();
+
+        if new_id < lens.get_dir_count() {
+            if let Some(len) = lens.get_file_count(new_id) {
+                self.wid.set_rows(len as i32);
+                self.wid.redraw();
+                // println!("Redrawing, len {}", len);
             }
         }
+        // }
     }
 
     pub fn set_file_ix(&mut self, new_id: usize) {
