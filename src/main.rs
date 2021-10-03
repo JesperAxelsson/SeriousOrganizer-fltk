@@ -4,7 +4,7 @@ use log::LevelFilter;
 use parking_lot::Mutex;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
 
-use std::fs::{self, metadata, File};
+use std::fs::metadata;
 use std::sync::Arc;
 
 use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::TableContext, window};
@@ -66,6 +66,7 @@ fn get_dir_path() -> String {
 #[cfg(not(debug_assertions))]
 fn get_dir_path() -> String {
     use directories::BaseDirs;
+    use std::fs::{self, File};
 
     if let Some(base_dirs) = BaseDirs::new() {
         let dir = base_dirs.data_dir();
