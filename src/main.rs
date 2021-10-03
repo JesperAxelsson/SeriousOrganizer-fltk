@@ -2,6 +2,7 @@ use fltk::table::TableRow;
 use fltk::window::Window;
 use log::LevelFilter;
 use parking_lot::Mutex;
+use serious_organizer_lib::models::Entry;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
 
 use std::fs::metadata;
@@ -396,28 +397,28 @@ fn show_entry_context_menu(
             vec![
                 "Add label",
                 "Label >",
-                // "3rd val",
+                "Delete Entry",
                 "Rename Entry",
                 "Move to Dir",
             ]
         } else {
-            vec![
-                "Add label",
-                "Label >",
-                //  "3rd val",
-                "Rename Entry",
-            ]
+            vec!["Add label", "Label >", "Delete Entry", "Rename Entry"]
         };
 
         let x = MenuItem::new(&choices);
 
-        let entry_ix = selection.iter().next().unwrap();
-        let entry = {
-            lens.lock()
-                .get_dir_entry(*entry_ix as usize)
-                .unwrap()
-                .clone()
-        };
+        let mut entries = Vec::new();
+        {
+            let lens = lens.lock();
+            // Get selected entries
+            for ix in selection.iter() {
+                if let Some(dir_entry) = lens.get_dir_entry(*ix as usize) {
+                    let EntryId(id) = dir_entry.id;
+                    println!("Convert ix {} to {}", ix, id);
+                    entries.push(id as u32);
+                }
+            }
+        }
 
         // let x = MenuItem::new(&v);
         match x.popup(app::event_x(), app::event_y()) {
@@ -435,19 +436,6 @@ fn show_entry_context_menu(
                         dialog.show();
                     }
                     "Label >" => {
-                        let mut entries = Vec::new();
-                        {
-                            let lens = lens.lock();
-                            // Get selected entries
-                            for ix in selection.iter() {
-                                if let Some(dir_entry) = lens.get_dir_entry(*ix as usize) {
-                                    let EntryId(id) = dir_entry.id;
-                                    println!("Convert ix {} to {}", ix, id);
-                                    entries.push(id as u32);
-                                }
-                            }
-                        }
-
                         println!("Got entries: {:?}", entries);
 
                         // Label select dialog
@@ -460,6 +448,10 @@ fn show_entry_context_menu(
                         wind.deactivate();
                         dialog.show();
                         wind.activate();
+                        sender.send(Message::EntryTableInvalidated);
+                    }
+                    "Delete Entry" => {
+                        delete_entry(&entry, lens.clone());
                         sender.send(Message::EntryTableInvalidated);
                     }
                     "Rename Entry" => {
@@ -495,4 +487,26 @@ fn show_entry_context_menu(
             }
         }
     }
+}
+
+fn delete_entry(entry: &Entry, lens: Arc<Mutex<Lens>>) {
+    if !show_delete_confirmation_dialog(entry.name.to_string()) {
+        return;
+    }
+
+    println!("Delete the entry {}", entry.name);
+
+    let mut lens = lens.lock();
+    lens.remove_entry(entry)
+        .expect(&format!("Failed to remove entry {}", entry.name));
+}
+
+fn show_delete_confirmation_dialog(text: String) -> bool {
+    let dialog = choice_dialog::ChoiceDialog::new(
+        format!("Are you sure you want to remove {}", text),
+        vec!["Ok".to_string(), "Cancel".to_string()],
+    );
+    dialog.show();
+
+    dialog.result() == 0
 }
