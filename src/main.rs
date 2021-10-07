@@ -1,30 +1,26 @@
 use fltk::table::TableRow;
-use fltk::window::Window;
 use log::LevelFilter;
 use parking_lot::Mutex;
-use serious_organizer_lib::models::Entry;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
 
-use std::fs::metadata;
 use std::sync::Arc;
 
-use fltk::{app, app::*, button::*, frame, group, input::*, menu::*, table::TableContext, window};
+use fltk::{app, app::*, button::*, frame, group, input::*, table::TableContext, window};
 use fltk::{enums::*, prelude::*};
 
 use open;
 
+use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
-use serious_organizer_lib::{dir_search, models::EntryId};
 
 #[macro_use]
 extern crate log;
 
-// mod counter;
-// mod layout;
-
 mod choice_dialog;
+mod entry_context_menu;
 mod entry_table;
 mod error_dialog;
+mod file_context_menu;
 mod file_table;
 mod label;
 mod location;
@@ -32,14 +28,13 @@ mod model;
 mod rename_dialog;
 mod table_utils;
 
-use choice_dialog::ChoiceDialog;
 use entry_table::EntryTable;
-use error_dialog::ErrorDialog;
+
+use entry_context_menu::show_entry_context_menu;
+use file_context_menu::show_file_context_menu;
 use file_table::FileTable;
 use model::message::Message;
 
-use label::add_label_dialog;
-use label::entry_label_dialog;
 use label::label_list;
 use location::location_dialog;
 use location::location_table;
@@ -199,57 +194,54 @@ fn main() {
     });
 
     // Setup file table
-    let file_tbl_c = file_tbl.clone();
+
+    let sender_c = sender.clone();
     let mut last_click_started = false;
-    file_tbl.handle(move |_, evt: Event| {
-        if file_tbl_c.callback_context() != TableContext::Cell {
-            return false;
-        }
 
+    file_tbl.handle(move |file_wid, evt: Event| {
         let btn = app::event_mouse_button();
-        // Left click
-        if evt == Event::Push && btn == app::MouseButton::Left {
-            println!("Filetable Click!");
-            if !app::event_clicks() {
-                last_click_started = false
-            }
 
-            let path = file_tbl_c.get_selected_file_path();
-            if !last_click_started && app::event_clicks() && path.is_some() {
-                println!("Open!");
-                last_click_started = true;
-                open::that_in_background(path.unwrap());
-            }
+        if evt == Event::Released && btn == app::MouseButton::Left {
+            match file_wid.callback_context() {
+                TableContext::ColHeader => {
+                    println!("Handle File Got colheader callback");
+                    sender_c.send(Message::FileTableSortCol(file_wid.callback_col()));
+                    return true;
+                }
+                TableContext::Cell => {
+                    println!("Handle File Got cell changed");
+                    sender_c.send(Message::FileTableChanged(file_wid.callback_row() as usize));
 
-            return true;
+                    println!("Filetable Click!");
+                    if !app::event_clicks() {
+                        last_click_started = false
+                    }
+
+                    if !last_click_started && app::event_clicks() {
+                        last_click_started = true;
+
+                        sender_c.send(Message::FileTableOpen);
+                        sender_c.send(Message::FileTableInvalidated);
+                    }
+
+                    return true;
+                }
+                _ => (),
+            }
         }
 
         // Right click
-        if evt == Event::Push && btn == app::MouseButton::Right {
-            // println!("FL: {:?}, {:?}, {:?}", evt, app::event_clicks(), last_click_started);
-            let path = file_tbl_c.get_selected_file_path();
-            // println!("Event: {:?}, {:?}, {:?}", evt, app::event_clicks(), path);
-            if path.is_some() {
-                println!("Context menu!");
+        if evt == Event::Push
+            && btn == app::MouseButton::Right
+            && file_wid.callback_context() == TableContext::Cell
+        {
+            println!("File table get selected");
 
-                let v = vec!["1st val", "2nd val", "3rd val", "Rename Entry"];
-                let x = MenuItem::new(&v);
-                match x.popup(app::event_x(), app::event_y()) {
-                    None => println!("No value was chosen!"),
-                    Some(val) => {
-                        println!("{}", val.label().unwrap());
-                        if val.label().unwrap() == "1st val" {}
-
-                        if val.label().unwrap() == "2st val" {
-                            // let lens = lens_c.lock();
-                            // lens.add_label
-                        }
-                    }
-                }
-            }
-
+            let selection = get_selected_index(file_wid);
+            sender_c.send(Message::FileShowContextMenu(selection));
             return true;
         }
+
         false
     });
 
@@ -291,10 +283,9 @@ fn main() {
     });
 
     // Setup search input
-
     input.set_trigger(CallbackTrigger::Changed);
     let lens_c = lens.clone();
-    let mut dir_tbl_c = dir_tbl.wid.clone();
+    let sender_c = sender.clone();
     input.set_callback(move |input_c: &mut Input| {
         let dir_count;
         {
@@ -302,211 +293,59 @@ fn main() {
             lens.update_search_text(&input_c.value());
             dir_count = lens.get_dir_count();
         }
-        dir_tbl_c.set_rows(dir_count as i32);
+        sender_c.send(Message::EntryTableInvalidated);
+        sender_c.send(Message::FileTableInvalidated);
+
         println!("Banan editing {} found: {}", input_c.value(), dir_count);
     });
 
-    let mut file_tbl_c = file_tbl.clone();
-    file_tbl.set_trigger(CallbackTrigger::Changed);
-    file_tbl.set_callback(move |_| match file_tbl_c.callback_context() {
-        TableContext::ColHeader => {
-            file_tbl_c.toggle_sort_column(file_tbl_c.callback_col());
-        }
-        TableContext::Cell => {
-            file_tbl_c.set_file_ix(file_tbl_c.callback_row() as usize);
-        }
-        _ => (),
-    });
-
-    // let label_list_c = label_list.clone();
-    // let mut dir_tbl_c = dir_tbl.clone();
-
     wind.handle(move |h_wnd, evt: Event| {
-        // if evt == Event::NoEvent {
-        //     // println!("Wind NoEvent?!");
-        //     return true;
-        // }
-
         if evt == Event::Activate {
             println!("Wind activate!");
-            // return true;
         }
 
         if evt == Event::Deactivate {
             println!("Wind Deactivate!");
-            // return true;
         }
 
         if evt == Event::Focus {
             h_wnd.redraw();
             println!("*** bgn");
-            // println!(
-            //     "Wind Focus! lbls: ({}, {})",
-            //     dir_tbl_c.wid.x(), dir_tbl_c.wid.y()
-            // );
-            // println!(
-            //     "Wind Focus! lbls: ({}, {})",
-            //     label_list_c.wid.x(), label_list_c.wid.y()
-            // );
-            // println!("*** end");
             return true;
         }
 
         false
     });
 
-    // app.run().unwrap();
     while app.wait() {
         if let Some(msg) = reciever.recv() {
             match msg {
+                // Label Table
                 Message::LabelTableInvalidated => label_list.update(),
+
+                // Entry Table
                 Message::EntryChanged(ix) => file_tbl.set_dir_ix(ix),
                 Message::EntryTableInvalidated => dir_tbl.update(),
                 Message::EntryTableSortCol(col) => dir_tbl.toggle_sort_column(col),
                 Message::EntryShowContextMenu(selection) => {
                     show_entry_context_menu(selection, lens.clone(), sender.clone(), &mut wind)
                 }
-            }
-        }
-    }
-}
 
-fn show_entry_context_menu(
-    selection: Vec<u32>,
-    lens: Arc<Mutex<Lens>>,
-    sender: Sender<Message>,
-    wind: &mut Window,
-) {
-    if selection.len() > 0 {
-        println!("Context menu!");
-
-        let entry_ix = selection.iter().next().unwrap();
-        let entry = {
-            lens.lock()
-                .get_dir_entry(*entry_ix as usize)
-                .unwrap()
-                .clone()
-        };
-
-        let meta = metadata(&entry.path).expect(&format!(
-            "Failed to find meta data for entry! path: {}",
-            entry.path
-        ));
-
-        let choices = if meta.is_file() {
-            vec![
-                "Add label",
-                "Label >",
-                "Delete Entry",
-                "Rename Entry",
-                "Move to Dir",
-            ]
-        } else {
-            vec!["Add label", "Label >", "Delete Entry", "Rename Entry"]
-        };
-
-        let x = MenuItem::new(&choices);
-
-        let mut entries = Vec::new();
-        {
-            let lens = lens.lock();
-            // Get selected entries
-            for ix in selection.iter() {
-                if let Some(dir_entry) = lens.get_dir_entry(*ix as usize) {
-                    let EntryId(id) = dir_entry.id;
-                    println!("Convert ix {} to {}", ix, id);
-                    entries.push(id as u32);
+                // File Table
+                Message::FileTableInvalidated => file_tbl.update(),
+                Message::FileTableSortCol(col) => file_tbl.toggle_sort_column(col),
+                Message::FileShowContextMenu(selection) => {
+                    show_file_context_menu(&mut file_tbl, selection, lens.clone(), sender.clone())
                 }
-            }
-        }
-
-        // let x = MenuItem::new(&v);
-        match x.popup(app::event_x(), app::event_y()) {
-            None => println!("No value was chosen!"),
-            Some(val) => {
-                println!("{}", val.label().unwrap());
-
-                match val.label().unwrap().as_str() {
-                    "Add label" => {
-                        let dialog = add_label_dialog::AddLabelDialog::new(
-                            lens.clone(),
-                            sender.clone(),
-                            // label_update.clone(),
-                        );
-                        dialog.show();
-                    }
-                    "Label >" => {
-                        println!("Got entries: {:?}", entries);
-
-                        // Label select dialog
-                        let dialog = entry_label_dialog::EntryLabelDialog::new(
-                            lens.clone(),
-                            entries,
-                            // label_update.clone(),
-                        );
-
-                        wind.deactivate();
-                        dialog.show();
-                        wind.activate();
-                        sender.send(Message::EntryTableInvalidated);
-                    }
-                    "Delete Entry" => {
-                        delete_entry(&entry, lens.clone());
-                        sender.send(Message::EntryTableInvalidated);
-                    }
-                    "Rename Entry" => {
-                        let dialog = rename_dialog::RenameDialog::new(lens.clone(), entry);
-                        dialog.show();
-                        sender.send(Message::EntryTableInvalidated);
-                    }
-                    "Move to Dir" => {
-                        let dialog = ChoiceDialog::new(
-                            format!("Move {:?} to a dir?", entry.path),
-                            vec!["Yes".to_string(), "No".to_string()],
-                        );
-
-                        dialog.show();
-                        if dialog.result() == 0 {
-                            {
-                                let result = lens.lock().move_file_entry_to_dir_entry(entry);
-                                if let Err(err) = result {
-                                    println!("Error while renaming file: {:?}", err);
-                                    let err_dialog = ErrorDialog::new(err.to_string());
-                                    err_dialog.show();
-                                }
-                            }
-                            sender.send(Message::EntryTableInvalidated);
-                        } else {
-                            println!("Abort dir thing");
-                        }
-                    }
-                    _ => {
-                        println!("Unknown popup string: {}", val.label().unwrap())
+                Message::FileTableChanged(ix) => file_tbl.set_file_ix(ix as usize),
+                Message::FileTableOpen => {
+                    let path = file_tbl.get_selected_file_path();
+                    if let Some(path) = path {
+                        println!("Open! {}", path);
+                        open::that_in_background(path);
                     }
                 }
             }
         }
     }
-}
-
-fn delete_entry(entry: &Entry, lens: Arc<Mutex<Lens>>) {
-    if !show_delete_confirmation_dialog(entry.name.to_string()) {
-        return;
-    }
-
-    println!("Delete the entry {}", entry.name);
-
-    let mut lens = lens.lock();
-    lens.remove_entry(entry)
-        .expect(&format!("Failed to remove entry {}", entry.name));
-}
-
-fn show_delete_confirmation_dialog(text: String) -> bool {
-    let dialog = choice_dialog::ChoiceDialog::new(
-        format!("Are you sure you want to remove {}", text),
-        vec!["Ok".to_string(), "Cancel".to_string()],
-    );
-    dialog.show();
-
-    dialog.result() == 0
 }

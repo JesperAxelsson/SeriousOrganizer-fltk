@@ -2,6 +2,7 @@ use fltk::{button::*, window::*};
 
 use fltk::prelude::*;
 
+use serious_organizer_lib::models::{Entry, EntryId};
 use serious_organizer_lib::{lens::Lens, models::LabelId};
 // use serious_organizer_lib::lens
 use parking_lot::Mutex;
@@ -18,9 +19,16 @@ pub struct EntryLabelDialog {
 }
 
 impl EntryLabelDialog {
-    pub fn new(lens: Arc<Mutex<Lens>>, entry_ids: Vec<u32>) -> Self {
-        // Gather all labels that have entries that are selected
+    pub fn new(lens: Arc<Mutex<Lens>>, entries: Vec<Entry>) -> Self {
+        let entry_ids: Vec<u32> = entries
+            .iter()
+            .map(|e| {
+                let EntryId(entry_id) = e.id;
+                entry_id as u32
+            })
+            .collect();
 
+        // Gather all labels that have entries that are selected
         let mut org_labels = HashSet::new();
         {
             let lens_c = lens.lock();
@@ -119,7 +127,7 @@ impl EntryLabelDialog {
         dialog.end();
         dialog.show();
         dialog.make_current();
-        
+
         while dialog.shown() {
             let _ = fltk::app::wait();
         }

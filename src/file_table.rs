@@ -114,35 +114,31 @@ impl FileTable {
         table
     }
 
+    pub fn get_dir_ix(&mut self) -> usize {
+        self.dir_id.load(Ordering::Relaxed) as usize
+    }
+
     pub fn set_dir_ix(&mut self, new_id: usize) {
-        let lens = &*self.lens.lock();
-
-        let new_ix = lens.convert_ix(new_id);
-        println!("Got new dir id: {:?}", new_ix);
-        let old_id = self.dir_id.load(Ordering::Relaxed);
-        let new_id_i = new_id as isize;
-
-        let old_ix = lens.convert_ix(old_id as usize);
-        println!("Got old dir id: {:?}", old_ix);
-
-        // if old_id != new_id_i {
-        self.dir_id.store(new_id_i, Ordering::Relaxed);
-
-        // get_dir_count
-        // let lens = &*self.lens.lock();
         {
-            *self.files.lock() = lens.get_dir_files(new_id).cloned();
-        }
+            let lens = self.lens.lock();
 
-        self.sort_by_column();
+            let new_ix = lens.convert_ix(new_id);
+            println!("Got new dir id: {:?}", new_ix);
+            let old_id = self.dir_id.load(Ordering::Relaxed);
+            let new_id_i = new_id as isize;
 
-        if new_id < lens.get_dir_count() {
-            if let Some(len) = lens.get_file_count(new_id) {
-                self.wid.set_rows(len as i32);
-                self.wid.redraw();
-                // println!("Redrawing, len {}", len);
+            let old_ix = lens.convert_ix(old_id as usize);
+            println!("Got old dir id: {:?}", old_ix);
+
+            // if old_id != new_id_i {
+            self.dir_id.store(new_id_i, Ordering::Relaxed);
+
+            {
+                *self.files.lock() = lens.get_dir_files(new_id).cloned();
             }
         }
+
+        self.update();
         // }
     }
 
@@ -161,18 +157,14 @@ impl FileTable {
             return None;
         }
 
-        // let dir_id = dir_id as usize;
         let file_id = file_id as usize;
 
-        // let lenf = self.lens.lock();
-        // let ff = lenf.get_file_entry(dir_id, file_id);
         if let Some(ref bl) = files {
             let ff = bl.get(file_id);
             if let Some(file) = ff {
                 return Some(file.path.clone());
             }
         }
-        // return Some(ff.path.clone());
         None
     }
 
@@ -239,6 +231,28 @@ impl FileTable {
             *sort = Sort::new(col, ord);
         }
         self.sort_by_column();
+    }
+
+    pub fn update(&mut self) {
+        println!("File table update");
+
+        let dir_ix = self.get_dir_ix();
+        {
+            let lens = &*self.lens.lock();
+            if let Some(len) = lens.get_file_count(dir_ix) {
+                self.sort_by_column();
+                self.wid.set_rows(len as i32);
+            }
+        }
+
+        self.set_damage(true);
+        self.set_damage_type(Damage::all());
+        self.set_changed();
+        self.redraw();
+    }
+
+    pub fn get_files(&self) -> Arc<Mutex<Option<Vec<File>>>> {
+        self.files.clone()
     }
 }
 
