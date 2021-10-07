@@ -10,7 +10,7 @@ use serious_organizer_lib::{
     models::File,
 };
 
-use crate::table_utils::{draw_data, draw_header, pretty_size};
+use crate::table_utils::{ draw_data_color, draw_header, get_file_color, pretty_size};
 
 #[derive(Clone)]
 pub struct FileTable {
@@ -63,41 +63,37 @@ impl FileTable {
 
                         if let Some(files) = &*table_c.files.lock() {
                             if let Some(file) = files.get(row as usize) {
-                                // let mut all_bounds = true;
-                                // for i in 0..file.name.len() {
-                                //     if !file.name.is_char_boundary(i) {
-                                //         all_bounds = false;
-                                //     }
-                                // }
-                                // println!(
-                                //     "file draw {:?} {} {} row: {} len: {} boundry: {:?}",
-                                //     file.name,
-                                //     file.name.len(),
-                                //     file.name.chars().count(),
-                                //     row,
-                                //     files.len(),
-                                //     file.name.escape_default()
-                                // );
-
                                 let name = file.name.as_str();
-
-                                // let name = if all_bounds {
-                                //     file.name.as_str()
-                                // } else {
-                                //     "{Error}"
-                                // };
-
-                                // println!("Use name is error! {:?}", name);
+                                let color = get_file_color(name);
 
                                 match col {
-                                    0 => draw_data(name, x, y, w, h, selected, Align::Left),
-                                    1 => draw_data(&file.path, x, y, w, h, selected, Align::Left),
-                                    2 => draw_data(
+                                    0 => draw_data_color(
+                                        name,
+                                        x,
+                                        y,
+                                        w,
+                                        h,
+                                        color,
+                                        selected,
+                                        Align::Left,
+                                    ),
+                                    1 => draw_data_color(
+                                        &file.path,
+                                        x,
+                                        y,
+                                        w,
+                                        h,
+                                        color,
+                                        selected,
+                                        Align::Left,
+                                    ),
+                                    2 => draw_data_color(
                                         &pretty_size(file.size),
                                         x,
                                         y,
                                         w,
                                         h,
+                                        color,
                                         selected,
                                         Align::Right,
                                     ),
