@@ -168,7 +168,7 @@ impl FileTable {
 
         let files = &*self.files.lock();
 
-        if files.is_none() || dir_id.is_some() || file_id < 0 {
+        if files.is_none() || dir_id.is_none() || file_id < 0 {
             return None;
         }
 

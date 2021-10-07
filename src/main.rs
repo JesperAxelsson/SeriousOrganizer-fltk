@@ -213,7 +213,6 @@ fn main() {
                 TableContext::Cell => {
                     println!("Handle File Got cell changed");
                     sender_c.send(Message::FileTableChanged(file_wid.callback_row() as usize));
-                    sender_c.send(Message::FileTableInvalidated);
 
                     println!("Filetable Click!");
                     if !app::event_clicks() {
@@ -224,8 +223,10 @@ fn main() {
                         last_click_started = true;
 
                         sender_c.send(Message::FileTableOpen);
-                        sender_c.send(Message::FileTableInvalidated);
+                        // sender_c.send(Message::FileTableInvalidated);
                     }
+
+                    sender_c.send(Message::FileTableInvalidated);
 
                     return true;
                 }
@@ -352,6 +353,8 @@ fn main() {
                 Message::FileTableChanged(ix) => file_tbl.set_file_ix(ix as usize),
                 Message::FileTableOpen => {
                     let path = file_tbl.get_selected_file_path();
+                    println!("Running file table open {:?}", path);
+
                     if let Some(path) = path {
                         println!("Open! {}", path);
                         open::that_in_background(path);
