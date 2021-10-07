@@ -42,9 +42,9 @@ impl EntryTable {
         table
             .wid
             .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
-                table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
-                table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
-                table::TableContext::Cell => {
+                TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
+                TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
+                TableContext::Cell => {
                     let l = lens_c.lock();
                     if let Some(dir) = l.get_dir_entry(row as usize) {
                         let (data, align) = {

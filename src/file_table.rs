@@ -10,7 +10,7 @@ use serious_organizer_lib::{
     models::File,
 };
 
-use crate::table_utils::{ draw_data_color, draw_header, get_file_color, pretty_size};
+use crate::table_utils::{draw_data_color, draw_header, get_file_color, pretty_size};
 
 #[derive(Clone)]
 pub struct FileTable {
@@ -46,18 +46,14 @@ impl FileTable {
         table.wid.set_rows(0);
 
         let table_c = table.clone();
-
-        // let lens_c = table.lens.clone();
-        let dir_id_c = table.dir_id.clone();
         table
             .wid
             .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
-                table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
-                table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
-                // table::TableContext::RowHeader => draw_header(&format!("{}", row + 1), x, y, w, h),
-                table::TableContext::Cell => {
-                    let dir_id = dir_id_c.load(Ordering::Relaxed);
-                    if dir_id >= 0 {
+                TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
+                TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
+                TableContext::Cell => {
+                    let dir_id = table_c.get_dir_ix();
+                    if dir_id.is_some() {
                         // let selected = table_c.row_selected(row);
                         let selected = t.row_selected(row);
 
@@ -110,46 +106,69 @@ impl FileTable {
         table
     }
 
-    pub fn get_dir_ix(&mut self) -> usize {
-        self.dir_id.load(Ordering::Relaxed) as usize
+    pub fn get_dir_ix(&self) -> Option<usize> {
+        let dir_id = self.dir_id.load(Ordering::Relaxed);
+        if dir_id >= 0 {
+            Some(dir_id as usize)
+        } else {
+            None
+        }
     }
 
-    pub fn set_dir_ix(&mut self, new_id: usize) {
+    pub fn set_dir_ix(&mut self, new_id: Option<usize>) {
         {
+            if new_id.is_none() {
+                self.dir_id.store(-1, Ordering::Relaxed);
+                return;
+            }
+
+            let new_id = new_id.unwrap();
+
             let lens = self.lens.lock();
 
             let new_ix = lens.convert_ix(new_id);
             println!("Got new dir id: {:?}", new_ix);
-            let old_id = self.dir_id.load(Ordering::Relaxed);
-            let new_id_i = new_id as isize;
 
-            let old_ix = lens.convert_ix(old_id as usize);
-            println!("Got old dir id: {:?}", old_ix);
+            let new_id = if new_ix.is_some() {
+                new_id as isize
+            } else {
+                -1
+            };
 
-            // if old_id != new_id_i {
-            self.dir_id.store(new_id_i, Ordering::Relaxed);
+            self.dir_id.store(new_id, Ordering::Relaxed);
 
             {
-                *self.files.lock() = lens.get_dir_files(new_id).cloned();
+                *self.files.lock() = lens.get_dir_files(new_id as usize).cloned();
             }
         }
-
         self.update();
-        // }
     }
 
     pub fn set_file_ix(&mut self, new_id: usize) {
+        // let files = self.files.lock();
+        if let Some(files) = &*self.files.lock() {
+            if new_id >= files.len() {
+                println!(
+                    "Got unexpected file id! got: {} max: {}",
+                    new_id,
+                    files.len()
+                );
+            }
+        } else {
+            println!("No files found when settings file_ix!");
+        }
+
         // println!("Got new file id: {}", new_id);
         self.file_id.store(new_id as isize, Ordering::Relaxed);
     }
 
     pub fn get_selected_file_path(&self) -> Option<String> {
         let file_id = self.file_id.load(Ordering::Relaxed);
-        let dir_id = self.dir_id.load(Ordering::Relaxed);
+        let dir_id = self.get_dir_ix();
 
         let files = &*self.files.lock();
 
-        if files.is_none() || dir_id < 0 || file_id < 0 {
+        if files.is_none() || dir_id.is_some() || file_id < 0 {
             return None;
         }
 
@@ -233,12 +252,19 @@ impl FileTable {
         println!("File table update");
 
         let dir_ix = self.get_dir_ix();
-        {
+
+        if let Some(dir_ix) = dir_ix {
             let lens = &*self.lens.lock();
-            if let Some(len) = lens.get_file_count(dir_ix) {
+            if let Some(len) = lens.get_file_count(dir_ix as usize) {
                 self.sort_by_column();
                 self.wid.set_rows(len as i32);
+            } else {
+                self.wid.set_rows(0);
             }
+        } else {
+            println!("File table update set row to zero");
+
+            self.wid.set_rows(0);
         }
 
         self.set_damage(true);

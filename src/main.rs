@@ -206,11 +206,14 @@ fn main() {
                 TableContext::ColHeader => {
                     println!("Handle File Got colheader callback");
                     sender_c.send(Message::FileTableSortCol(file_wid.callback_col()));
+                    sender_c.send(Message::FileTableInvalidated);
+
                     return true;
                 }
                 TableContext::Cell => {
                     println!("Handle File Got cell changed");
                     sender_c.send(Message::FileTableChanged(file_wid.callback_row() as usize));
+                    sender_c.send(Message::FileTableInvalidated);
 
                     println!("Filetable Click!");
                     if !app::event_clicks() {
@@ -261,7 +264,7 @@ fn main() {
                 }
                 TableContext::Cell => {
                     println!("Handle Got cell changed");
-                    sender_c.send(Message::EntryChanged(dir_wid.callback_row() as usize));
+                    sender_c.send(Message::EntryChanged(Some(dir_wid.callback_row() as usize)));
                     return true;
                 }
                 _ => (),
@@ -325,7 +328,16 @@ fn main() {
 
                 // Entry Table
                 Message::EntryChanged(ix) => file_tbl.set_dir_ix(ix),
-                Message::EntryTableInvalidated => dir_tbl.update(),
+
+                Message::EntryTableInvalidated => {
+                    dir_tbl.update();
+                    let ix = get_selected_index(&mut dir_tbl);
+                    if ix.len() > 0 {
+                        sender.send(Message::EntryChanged(Some(ix[0] as usize)));
+                    } else {
+                        sender.send(Message::EntryChanged(None));
+                    }
+                }
                 Message::EntryTableSortCol(col) => dir_tbl.toggle_sort_column(col),
                 Message::EntryShowContextMenu(selection) => {
                     show_entry_context_menu(selection, lens.clone(), sender.clone(), &mut wind)

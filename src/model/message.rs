@@ -6,7 +6,7 @@ pub enum Message {
     // Entry Table Events
     EntryTableInvalidated,
     EntryTableSortCol(i32),
-    EntryChanged(usize),
+    EntryChanged(Option<usize>),
     EntryShowContextMenu(Vec<u32>),
 
     // File table Events
