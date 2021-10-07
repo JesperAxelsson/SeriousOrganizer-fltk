@@ -1,3 +1,4 @@
+use fltk::app::channel;
 use fltk::{button::*, window::*};
 
 use fltk::prelude::*;
@@ -12,6 +13,9 @@ use crate::label::entry_label_list::EntryLabelList;
 
 // use super::entry_label_list::EntryLabelList;
 
+pub enum LabelMessage {
+}
+
 pub struct EntryLabelDialog {
     lens: Arc<Mutex<Lens>>,
     entry_ids: Arc<Vec<u32>>,
@@ -20,6 +24,7 @@ pub struct EntryLabelDialog {
 
 impl EntryLabelDialog {
     pub fn new(lens: Arc<Mutex<Lens>>, entries: Vec<Entry>) -> Self {
+
         let entry_ids: Vec<u32> = entries
             .iter()
             .map(|e| {
@@ -50,6 +55,9 @@ impl EntryLabelDialog {
     }
 
     pub fn show(&self) {
+        // TODO: Maybe use refactor to use sender instead.
+        let (_sender, reciever) = channel::<LabelMessage>();
+
         let mut dialog = Window::new(300, 100, 210, 260, "Select Labels");
         dialog.make_modal(true);
         println!("Make modal");
@@ -128,8 +136,17 @@ impl EntryLabelDialog {
         dialog.show();
         dialog.make_current();
 
+        // while dialog.shown() {
+        //     let _ = fltk::app::wait();
+        // }
+
         while dialog.shown() {
-            let _ = fltk::app::wait();
+            while fltk::app::wait() {
+                if let Some(msg) = reciever.recv() {
+                    match msg {
+                    }
+                }
+            }
         }
     }
 }
