@@ -65,7 +65,7 @@ impl EntryLabelList {
                     let l = lens_c.lock();
                     let label_lst = l.get_labels();
 
-                    if let Some(ref lbl) = label_lst.get(row as usize) {
+                    if let Some(lbl) = label_lst.get(row as usize) {
                         let LabelId(lbl_id) = lbl.id;
 
                         let sel_lbl = selected_label_ids_c.lock();
@@ -104,7 +104,7 @@ impl EntryLabelList {
                         lens.get_labels().clone()
                     };
 
-                    if let Some(ref lbl) = labels_list.get(lbl_ix) {
+                    if let Some(lbl) = labels_list.get(lbl_ix) {
                         let label_id: i32 = lbl.id.into();
                         let label_id: u32 = label_id as u32;
 

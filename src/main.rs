@@ -8,8 +8,6 @@ use std::sync::Arc;
 use fltk::{app, app::*, button::*, frame, group, input::*, table::TableContext, window};
 use fltk::{enums::*, prelude::*};
 
-use open;
-
 use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
 
@@ -140,7 +138,7 @@ fn main() {
 
     let mut table_row = group::Flex::default_fill().row();
 
-    let mut table_col = group::Flex::default_fill().column();
+    let  table_col = group::Flex::default_fill().column();
 
     let lens_c = lens.clone();
 
@@ -148,8 +146,8 @@ fn main() {
 
     let mut file_tbl = FileTable::new(w_size - label_width - 10, 260, lens.clone());
 
-    table_col.resizable(&mut dir_tbl.wid);
-    table_col.resizable(&mut file_tbl.wid);
+    table_col.resizable(&dir_tbl.wid);
+    table_col.resizable(& file_tbl.wid);
 
     table_col.end();
 
@@ -158,7 +156,7 @@ fn main() {
 
     table_row.set_size(&mut label_list.wid, label_width);
 
-    table_row.resizable(&mut table_col);
+    table_row.resizable(&table_col);
     table_row.end();
 
     col.end();
@@ -333,7 +331,7 @@ fn main() {
                 Message::EntryTableInvalidated => {
                     dir_tbl.update();
                     let ix = get_selected_index(&mut dir_tbl);
-                    if ix.len() > 0 {
+                    if !ix.is_empty() {
                         sender.send(Message::EntryChanged(Some(ix[0] as usize)));
                     } else {
                         sender.send(Message::EntryChanged(None));

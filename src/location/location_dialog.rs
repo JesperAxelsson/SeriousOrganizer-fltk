@@ -23,7 +23,7 @@ impl Location {
             }
         }
 
-        return false;
+        false
     }
 
     pub fn values(&self) -> Option<(String, String)> {
@@ -86,7 +86,7 @@ impl LocationDialog {
                 let l = lens_c.lock();
                 let loc_list = l.get_locations();
                 if loc_list.len() >= row as usize {
-                    let ref loc = loc_list[row as usize];
+                    let loc = &loc_list[row as usize];
 
                     match col {
                         0 => (loc.name.to_string(), Align::Left),
@@ -127,7 +127,7 @@ impl LocationDialog {
                 let mut lens = lens_c.lock();
 
                 let locations = lens.get_locations();
-                let ref loc = locations[loc_ix as usize];
+                let loc = &locations[loc_ix as usize];
                 let loc_id: i32 = loc.id.into();
 
                 lens.remove_location(loc_id as u32);

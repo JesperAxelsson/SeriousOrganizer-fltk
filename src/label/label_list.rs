@@ -60,7 +60,7 @@ impl LabelList {
 
                     let l = lens_c.lock();
                     let label_lst = l.get_labels();
-                    if let Some(ref lbl) = label_lst.get(row as usize) {
+                    if let Some(lbl) = label_lst.get(row as usize) {
                         let lbl_text = match lbl.state {
                             LabelState::Unset => "U",
                             LabelState::Include => "I",
@@ -130,7 +130,7 @@ impl LabelList {
                 let mut lens = lens.lock();
 
                 let labels_list = lens.get_labels();
-                if let Some(ref lbl) = labels_list.get(lbl_ix) {
+                if let Some(lbl) = labels_list.get(lbl_ix) {
                     let label_id: i32 = lbl.id.into();
                     let label_id: u32 = label_id as u32;
 

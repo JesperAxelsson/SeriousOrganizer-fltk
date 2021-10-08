@@ -54,7 +54,7 @@ impl RenameDialog {
                 {
                     println!("Rename from {} to {}", entry_c.name, &name);
                     let mut lens = lens_c.lock();
-                    let result = lens.rename_entry(entry_c.clone(), &name);
+                    let result = lens.rename_entry(entry_c.clone(), name);
                     if let Err(err) = result {
                         println!("Error while renaming file: {:?}", err);
                         let err_dialog = ErrorDialog::new(err.to_string());

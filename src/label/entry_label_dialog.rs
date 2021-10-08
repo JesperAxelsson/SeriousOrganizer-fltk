@@ -13,8 +13,7 @@ use crate::label::entry_label_list::EntryLabelList;
 
 // use super::entry_label_list::EntryLabelList;
 
-pub enum LabelMessage {
-}
+pub enum LabelMessage {}
 
 pub struct EntryLabelDialog {
     lens: Arc<Mutex<Lens>>,
@@ -24,7 +23,6 @@ pub struct EntryLabelDialog {
 
 impl EntryLabelDialog {
     pub fn new(lens: Arc<Mutex<Lens>>, entries: Vec<Entry>) -> Self {
-
         let entry_ids: Vec<u32> = entries
             .iter()
             .map(|e| {
@@ -89,7 +87,7 @@ impl EntryLabelDialog {
             let cur_select: Vec<u32> = currently_selected_labels
                 .iter()
                 .copied()
-                .collect::<Vec<u32>>(); //Vec::new();
+                .collect::<Vec<u32>>();
             let entries = entry_ids_c.iter().copied().collect();
             lens.add_entry_labels(entries, cur_select);
 
@@ -99,7 +97,7 @@ impl EntryLabelDialog {
                 .iter()
                 .map(|e| *e)
                 .copied()
-                .collect::<Vec<u32>>(); //Vec::new();
+                .collect::<Vec<u32>>();
 
             println!("Rem lbls: {:?}", to_remove);
 
@@ -143,8 +141,7 @@ impl EntryLabelDialog {
         while dialog.shown() {
             while fltk::app::wait() {
                 if let Some(msg) = reciever.recv() {
-                    match msg {
-                    }
+                    match msg {}
                 }
             }
         }
