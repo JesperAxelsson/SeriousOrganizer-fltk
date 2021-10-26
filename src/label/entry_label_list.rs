@@ -1,4 +1,5 @@
 use enums::Font;
+use fltk::app::Sender;
 use parking_lot::Mutex;
 use std::{collections::HashSet, sync::Arc};
 
@@ -15,6 +16,7 @@ pub struct EntryLabelList {
     pub wid: TableRow,
     lens: Arc<Mutex<Lens>>,
     pub selected_label_ids: Arc<Mutex<HashSet<u32>>>,
+    pub sender: Sender<LabelMessage>,
 }
 
 impl EntryLabelList {
@@ -25,6 +27,7 @@ impl EntryLabelList {
         h: i32,
         lens: Arc<Mutex<Lens>>,
         selected_label_ids: Arc<Mutex<HashSet<u32>>>,
+        sender: Sender<LabelMessage>,
     ) -> EntryLabelList {
         let headers = vec!["Name".to_string(), "State".to_string()];
 
@@ -32,6 +35,7 @@ impl EntryLabelList {
             wid: TableRow::new(x, y, w, h, ""),
             lens: lens,
             selected_label_ids,
+            sender: sender,
         };
 
         table.set_row_height_all(20);
@@ -141,14 +145,15 @@ impl EntryLabelList {
 
         println!("Label count: {}", label_count);
         self.set_rows(label_count as i32);
-        self.set_damage(true);
-        self.set_damage_type(Damage::all());
-        self.set_changed();
-        self.redraw();
+
+        self.sender.send(LabelMessage::LabelListChanged);
+        // self.redraw();
     }
 }
 
 use std::ops::{Deref, DerefMut};
+
+use super::entry_label_dialog::LabelMessage;
 
 impl Deref for EntryLabelList {
     type Target = TableRow;

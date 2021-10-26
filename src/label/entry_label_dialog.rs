@@ -13,7 +13,11 @@ use crate::label::entry_label_list::EntryLabelList;
 
 // use super::entry_label_list::EntryLabelList;
 
-pub enum LabelMessage {}
+#[derive(Clone, Debug)]
+pub enum LabelMessage {
+    LabelListChanged,
+    ExitDialog,
+}
 
 pub struct EntryLabelDialog {
     lens: Arc<Mutex<Lens>>,
@@ -53,23 +57,32 @@ impl EntryLabelDialog {
     }
 
     pub fn show(&self) {
-        // TODO: Maybe use refactor to use sender instead.
-        let (_sender, reciever) = channel::<LabelMessage>();
+        // TODO: Maybe use refactor to use more sender instead.
+        let (sender, reciever) = channel::<LabelMessage>();
 
         let mut dialog = Window::new(300, 100, 210, 260, "Select Labels");
         dialog.make_modal(true);
         println!("Make modal");
         let mut but_save = Button::new(10, 10, 60, 25, "Save");
-        let mut but_delete = Button::new(80, 10, 60, 25, "Cancel");
+        let mut but_cancel = Button::new(80, 10, 60, 25, "Cancel");
 
         let lens_c = self.lens.clone();
-        let lbl_table = EntryLabelList::new(10, 50, 200, 205, lens_c, self.select_labels.clone());
+        let sender_c = sender.clone();
+        let mut lbl_table = EntryLabelList::new(
+            10,
+            50,
+            200,
+            205,
+            lens_c,
+            self.select_labels.clone(),
+            sender_c,
+        );
 
         // Button save callback
         let entry_ids_c = self.entry_ids.clone();
         let lbl_table_c = lbl_table.clone();
         let lens_c = self.lens.clone();
-        let mut dialog_c = dialog.clone();
+        let sender_c = sender.clone();
         but_save.set_callback(move |_| {
             let currently_selected_labels = lbl_table_c.selected_label_ids.lock();
 
@@ -104,46 +117,35 @@ impl EntryLabelDialog {
             let entries = entry_ids_c.iter().copied().collect();
             lens.remove_entry_labels(entries, to_remove);
 
-            dialog_c.hide();
+            sender_c.send(LabelMessage::ExitDialog);
         });
-        // but_save.deactivate();
 
-        // Button delete callback
+        // Button cancel callback
         let mut dialog_c = dialog.clone();
-        but_delete.set_callback(move |_| {
-            dialog_c.hide();
+        let sender_c = sender.clone();
+        but_cancel.set_callback(move |_| {
+            sender_c.send(LabelMessage::ExitDialog);
         });
 
-        // Name changed
-        // let label_c = self.label.clone();
-        // let mut but_c = but_save.clone();
-        // input_name.set_trigger(CallbackTrigger::Changed);
-        // input_name.set_callback2(move |input_c: &mut Input| {
-        //     let name = input_c.value();
-        //     let mut lbl = label_c.lock();
-        //     if !name.is_empty() {
-        //         (*lbl) = Some(name);
-        //         but_c.activate();
-        //     } else {
-        //         (*lbl) = None;
-        //         but_c.deactivate();
-        //     }
-        // });
-
+  
         dialog.end();
         dialog.show();
         dialog.make_current();
 
-        // while dialog.shown() {
-        //     let _ = fltk::app::wait();
-        // }
-
         while dialog.shown() {
             while fltk::app::wait() {
                 if let Some(msg) = reciever.recv() {
-                    match msg {}
+                    match msg {
+                        LabelMessage::LabelListChanged => lbl_table.redraw(),
+                        LabelMessage::ExitDialog => {
+                            dialog_c.hide();
+                            break;
+                        }
+                    }
                 }
             }
         }
+
+        println!("Exit labellist");
     }
 }
