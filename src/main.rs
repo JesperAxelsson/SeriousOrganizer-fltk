@@ -138,7 +138,7 @@ fn main() {
 
     let mut table_row = group::Flex::default_fill().row();
 
-    let  table_col = group::Flex::default_fill().column();
+    let table_col = group::Flex::default_fill().column();
 
     let lens_c = lens.clone();
 
@@ -147,7 +147,7 @@ fn main() {
     let mut file_tbl = FileTable::new(w_size - label_width - 10, 260, lens.clone());
 
     table_col.resizable(&dir_tbl.wid);
-    table_col.resizable(& file_tbl.wid);
+    table_col.resizable(&file_tbl.wid);
 
     table_col.end();
 
@@ -202,17 +202,17 @@ fn main() {
         if evt == Event::Released && btn == app::MouseButton::Left {
             match file_wid.callback_context() {
                 TableContext::ColHeader => {
-                    println!("Handle File Got colheader callback");
+                    // println!("Handle File Got colheader callback");
                     sender_c.send(Message::FileTableSortCol(file_wid.callback_col()));
                     sender_c.send(Message::FileTableInvalidated);
 
                     return true;
                 }
                 TableContext::Cell => {
-                    println!("Handle File Got cell changed");
+                    // println!("Handle File Got cell changed");
                     sender_c.send(Message::FileTableChanged(file_wid.callback_row() as usize));
 
-                    println!("Filetable Click!");
+                    // println!("Filetable Click!");
                     if !app::event_clicks() {
                         last_click_started = false
                     }
@@ -257,12 +257,12 @@ fn main() {
         if evt == Event::Released && btn == app::MouseButton::Left {
             match dir_wid.callback_context() {
                 TableContext::ColHeader => {
-                    println!("Handle Got colheader callback");
+                    // println!("Handle Got colheader callback");
                     sender_c.send(Message::EntryTableSortCol(dir_wid.callback_col()));
                     return true;
                 }
                 TableContext::Cell => {
-                    println!("Handle Got cell changed");
+                    // println!("Handle Got cell changed");
                     sender_c.send(Message::EntryChanged(Some(dir_wid.callback_row() as usize)));
                     return true;
                 }
@@ -275,7 +275,7 @@ fn main() {
             && btn == app::MouseButton::Right
             && dir_wid.callback_context() == TableContext::Cell
         {
-            println!("Dir table get selected");
+            // println!("Dir table get selected");
 
             let selection = get_selected_index(dir_wid);
             sender_c.send(Message::EntryShowContextMenu(selection));
@@ -298,7 +298,7 @@ fn main() {
         sender_c.send(Message::EntryTableInvalidated);
         sender_c.send(Message::FileTableInvalidated);
 
-        println!("Banan editing {} found: {}", input_c.value(), dir_count);
+        // println!("Banan editing {} found: {}", input_c.value(), dir_count);
     });
 
     wind.handle(move |h_wnd, evt: Event| {
@@ -312,7 +312,7 @@ fn main() {
 
         if evt == Event::Focus {
             h_wnd.redraw();
-            println!("*** bgn");
+            // println!("*** bgn");
             return true;
         }
 
