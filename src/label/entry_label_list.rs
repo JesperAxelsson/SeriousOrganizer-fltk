@@ -7,7 +7,6 @@ use fltk::table::*;
 use fltk::{enums::*, prelude::*, *};
 
 use serious_organizer_lib::lens::Lens;
-use serious_organizer_lib::models::LabelId;
 
 use crate::table_utils::{draw_data, draw_header};
 
@@ -70,11 +69,9 @@ impl EntryLabelList {
                     let label_lst = l.get_labels();
 
                     if let Some(lbl) = label_lst.get(row as usize) {
-                        let LabelId(lbl_id) = lbl.id;
-
                         let sel_lbl = selected_label_ids_c.lock();
 
-                        let lbl_text = if sel_lbl.contains(&(lbl_id as u32)) {
+                        let lbl_text = if sel_lbl.contains(&(lbl.id as u32)) {
                             "X"
                         } else {
                             ""

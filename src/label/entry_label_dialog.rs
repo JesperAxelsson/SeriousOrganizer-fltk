@@ -3,8 +3,8 @@ use fltk::{button::*, window::*};
 
 use fltk::prelude::*;
 
-use serious_organizer_lib::models::{Entry, EntryId};
-use serious_organizer_lib::{lens::Lens, models::LabelId};
+use serious_organizer_lib::lens::Lens;
+use serious_organizer_lib::models::Entry;
 // use serious_organizer_lib::lens
 use parking_lot::Mutex;
 use std::{collections::HashSet, sync::Arc};
@@ -27,13 +27,7 @@ pub struct EntryLabelDialog {
 
 impl EntryLabelDialog {
     pub fn new(lens: Arc<Mutex<Lens>>, entries: Vec<Entry>) -> Self {
-        let entry_ids: Vec<u32> = entries
-            .iter()
-            .map(|e| {
-                let EntryId(entry_id) = e.id;
-                entry_id as u32
-            })
-            .collect();
+        let entry_ids: Vec<u32> = entries.iter().map(|e| e.id as u32).collect();
 
         // Gather all labels that have entries that are selected
         let mut org_labels = HashSet::new();
@@ -41,7 +35,7 @@ impl EntryLabelDialog {
             let lens_c = lens.lock();
             for entry_id in entry_ids.iter() {
                 let lbls = lens_c.entry_labels(*entry_id);
-                for LabelId(lbl_id) in lbls {
+                for lbl_id in lbls {
                     org_labels.insert(lbl_id as u32);
                 }
             }
@@ -93,8 +87,7 @@ impl EntryLabelDialog {
             let mut lens = lens_c.lock();
             let mut labels = HashSet::new();
             for label in lens.get_labels().iter() {
-                let LabelId(label_id) = label.id;
-                labels.insert(label_id as u32);
+                labels.insert(label.id as u32);
             }
 
             let cur_select: Vec<u32> = currently_selected_labels
@@ -127,7 +120,6 @@ impl EntryLabelDialog {
             sender_c.send(LabelMessage::ExitDialog);
         });
 
-  
         dialog.end();
         dialog.show();
         dialog.make_current();
