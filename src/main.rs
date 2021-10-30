@@ -3,6 +3,7 @@ use log::LevelFilter;
 use parking_lot::Mutex;
 use simplelog::{CombinedLogger, Config, SimpleLogger};
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use fltk::{app, app::*, button::*, frame, group, input::*, table::TableContext, window};
@@ -114,9 +115,11 @@ fn main() {
 
     let mut wind = window::Window::new(100, 100, w_size, h_size, "Serious Organizer");
     wind.make_resizable(true);
-    if let Ok(image) =
-        image::PngImage::load("assets/SerousIcon.png")
-    {
+
+    let config_path = Path::new(&db_path);
+    let mut config_path: PathBuf = config_path.parent().unwrap().to_path_buf();
+    config_path.push("SerousIcon.png");
+    if let Ok(image) = image::PngImage::load(config_path) {
         wind.set_icon(Some(image));
     }
 
