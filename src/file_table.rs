@@ -31,7 +31,7 @@ impl FileTable {
             dir_id: Arc::new(AtomicIsize::new(-1)),
             file_id: Arc::new(AtomicIsize::new(-1)),
             files: Arc::new(Mutex::new(None)),
-            col_sort: Arc::new(Mutex::new(Sort::new(SortColumn::Name, SortOrder::Desc))),
+            col_sort: Arc::new(Mutex::new(Sort::new(SortColumn::Name, SortOrder::Asc))),
         };
 
         table.wid.set_row_height_all(20);
