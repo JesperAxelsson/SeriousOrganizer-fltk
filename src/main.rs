@@ -6,7 +6,7 @@ use simplelog::{CombinedLogger, Config, SimpleLogger};
 use std::sync::Arc;
 
 use fltk::{app, app::*, button::*, frame, group, input::*, table::TableContext, window};
-use fltk::{enums::*, prelude::*};
+use fltk::{enums::*, image, prelude::*};
 
 use serious_organizer_lib::dir_search;
 use serious_organizer_lib::lens::Lens;
@@ -114,6 +114,11 @@ fn main() {
 
     let mut wind = window::Window::new(100, 100, w_size, h_size, "Serious Organizer");
     wind.make_resizable(true);
+    if let Ok(image) =
+        image::PngImage::load("assets/SerousIcon.png")
+    {
+        wind.set_icon(Some(image));
+    }
 
     println!("Setup app widgets");
 
@@ -289,11 +294,11 @@ fn main() {
     let lens_c = lens.clone();
     let sender_c = sender.clone();
     input.set_callback(move |input_c: &mut Input| {
-        let dir_count;
+        // let dir_count;
         {
             let mut lens = lens_c.lock();
             lens.update_search_text(&input_c.value());
-            dir_count = lens.get_dir_count();
+            // dir_count = lens.get_dir_count();
         }
         sender_c.send(Message::EntryTableInvalidated);
         sender_c.send(Message::FileTableInvalidated);
