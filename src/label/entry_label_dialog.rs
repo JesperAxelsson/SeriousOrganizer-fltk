@@ -1,4 +1,5 @@
-use fltk::app::channel;
+use fltk::app::{self, channel};
+use fltk::enums::{Event, Key};
 use fltk::{button::*, window::*};
 
 use fltk::prelude::*;
@@ -118,6 +119,15 @@ impl EntryLabelDialog {
         let sender_c = sender.clone();
         but_cancel.set_callback(move |_| {
             sender_c.send(LabelMessage::ExitDialog);
+        });
+
+        let sender_c = sender.clone();
+        dialog.handle(move |_, evt: Event| {
+            if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
+                sender_c.send(LabelMessage::ExitDialog);
+            }
+
+            false
         });
 
         dialog.end();
