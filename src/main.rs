@@ -22,6 +22,7 @@ mod error_dialog;
 mod file_context_menu;
 mod file_table;
 mod label;
+mod label_filter;
 mod location;
 mod model;
 mod rename_dialog;
@@ -135,6 +136,9 @@ fn main() {
     let mut input = Input::default().with_size(200, 25).with_label("Search");
     let mut but_reload = Button::default().with_size(60, 25).with_label("Reload");
     let mut but = Button::default().with_size(80, 25).with_label("Locations");
+    let mut label_filter = Button::default()
+        .with_size(80, 25)
+        .with_label("Label Filters");
 
     top_pack.end();
     top_pack.set_spacing(10);
@@ -174,6 +178,7 @@ fn main() {
 
     // *** End of widget contruction ***
 
+    // * Reload button *
     let lens_c = lens.clone();
 
     but_reload.set_callback(move |_| {
@@ -191,6 +196,7 @@ fn main() {
         println!("Done update data");
     });
 
+    // * Locations *
     let lens_c = lens.clone();
 
     but.set_callback(move |_| {
@@ -199,7 +205,14 @@ fn main() {
         dialog.show();
     });
 
-    // Setup file table
+    // * Label filter *
+    let lens_c = lens.clone();
+    label_filter.set_callback(move |_| {
+        // println!("Hello World!");
+        let dialog = label_filter::label_filter_dialog::LabelFilterDialog::new(lens_c.clone());
+        dialog.show();
+    });
+    // * Setup file table *
 
     let sender_c = sender.clone();
     let mut last_click_started = false;
