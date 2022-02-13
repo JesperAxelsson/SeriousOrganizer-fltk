@@ -9,7 +9,7 @@ use serious_organizer_lib::lens::LabelState;
 use serious_organizer_lib::lens::Lens;
 
 use crate::model::message::Message;
-use crate::table_utils::{draw_data, draw_header};
+use crate::table_utils::{draw_data, draw_header, ColHeader, ColSize, resize_column};
 
 #[derive(Clone)]
 pub struct LabelList {
@@ -22,7 +22,11 @@ pub struct LabelList {
 
 impl LabelList {
     pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>, sender: Sender<Message>) -> LabelList {
-        let headers = vec!["Name".to_string(), "State".to_string()];
+        let headers = vec![
+            ColHeader::new("Name", ColSize::Greedy),
+            ColHeader::new("State", ColSize::Greedy),
+        ];
+
         // let x2 = dyn_clone::clone_box(&*on_update);
         let mut table = LabelList {
             wid: TableRow::default().with_size(w, h),
@@ -48,13 +52,15 @@ impl LabelList {
         table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
         println!("Setup label click handler");
 
+        resize_column(&mut table, &headers);
+        
         let lens_c = table.lens.clone();
 
         table
             .wid
             .draw_cell(move |_, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
-                table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
+                table::TableContext::ColHeader => draw_header(&headers[col as usize].label, x, y, w, h),
                 table::TableContext::Cell => {
                     let selected = false;
 
@@ -131,7 +137,7 @@ impl LabelList {
 
                 let labels_list = lens.get_labels();
                 if let Some(lbl) = labels_list.get(lbl_ix) {
-                    let label_id= lbl.id as u32;
+                    let label_id = lbl.id as u32;
 
                     let btn = app::event_button();
 

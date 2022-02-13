@@ -1,7 +1,7 @@
 use fltk::app::{self, channel};
 use fltk::enums::{Event, Key};
 use fltk::group::Flex;
-use fltk::{button::*, window::*};
+use fltk::{button::*, dialog, window::*};
 
 use fltk::prelude::*;
 
@@ -68,6 +68,10 @@ impl LabelFilterDialog {
 
         col.end();
 
+        dialog.end();
+        dialog.show();
+        dialog.make_current();
+
         but_edit.deactivate();
         but_delete.deactivate();
 
@@ -79,21 +83,17 @@ impl LabelFilterDialog {
         dialog.handle(move |_, evt: Event| {
             if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
                 sender_c.send(LabelFilterMessage::ExitDialog);
+                println!("Return from dialog");
+                return true;
             }
 
             false
         });
 
-        dialog.end();
-        dialog.show();
-        dialog.make_current();
-
-        let mut dialog_c = dialog.clone();
-
         while dialog.shown() {
             while fltk::app::wait() {
                 if let Some(msg) = reciever.recv() {
-                    println!("Filter dialog got message {:?}", msg);
+                    println!("Filter got message {:?}", msg);
 
                     match msg {
                         LabelFilterMessage::RunFilters => self.run_filters(),
@@ -116,9 +116,19 @@ impl LabelFilterDialog {
                         }
                         LabelFilterMessage::DeleteSelected => {
                             if let Some(label_filter) = &*self.selected_label_filter.lock() {
-                                let mut lens_c = self.lens.lock();
-                                lens_c.delete_label_filter(label_filter);
-                                sender.send(LabelFilterMessage::ListChanged);
+                                let choice = dialog::choice_default(
+                                    &format!("Would you like to delete '{}'", label_filter.name),
+                                    "No",
+                                    "Yes",
+                                    "",
+                                );
+                                if choice == 1{
+                                    let mut lens_c = self.lens.lock();
+                                    lens_c.delete_label_filter(label_filter);
+                                    
+                                    sender.send(LabelFilterMessage::ListSelected(None));
+                                    sender.send(LabelFilterMessage::ListChanged);
+                                }
                             } else {
                                 println!("ShowEditDialog got no label filter selected!");
                             }
@@ -137,7 +147,7 @@ impl LabelFilterDialog {
                         }
                         LabelFilterMessage::ExitDialog => {
                             println!("Filter dialog got exit");
-                            dialog_c.hide();
+                            dialog.hide();
                             break;
                         }
                     }

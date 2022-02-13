@@ -337,6 +337,10 @@ fn main() {
             return true;
         }
 
+        if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
+            return true; // Skip this?
+        }
+
         false
     });
 

@@ -83,7 +83,18 @@ impl LabelFilterEditDialog {
             let label_filter = self.label_filter.lock();
             input_name.set_value(&label_filter.name);
             input_filter.set_value(&label_filter.filter);
-            // TODO: Set label_id as well
+
+            // Set label dropdown
+            let lens = self.lens.lock();
+            if let Some(label) = lens
+                .get_labels()
+                .iter()
+                .find(|l| l.id == label_filter.label_id)
+            {
+                if let Some(item) = choice.find_item(&label.name) {
+                    choice.set_item(&item);
+                }
+            }
         }
 
         top_row.end();
@@ -101,27 +112,20 @@ impl LabelFilterEditDialog {
         but_save.deactivate();
         let mut but_cancel = Button::new(80, 10, 60, 25, "Cancel");
 
-        top_row.end();
+        bot_row.end();
         col.set_size(&bot_row, 25);
 
         col.end();
+
+        dialog.end();
+        dialog.show();
+        dialog.make_current();
 
         // Button save callback
         but_save.emit(sender.clone(), LabelFilterEditMessage::SaveClicked);
 
         // Button cancel callback
         but_cancel.emit(sender.clone(), LabelFilterEditMessage::ExitDialog);
-
-        // Handle dialog escape
-        let sender_c = sender.clone();
-        dialog.handle(move |_, evt: Event| {
-            if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
-                sender_c.send(LabelFilterEditMessage::ExitDialog);
-                return true;
-            }
-
-            false
-        });
 
         // Name
         let sender_c = sender.clone();
@@ -140,36 +144,41 @@ impl LabelFilterEditDialog {
         });
 
         // Selected label
-        let sender_c = sender;
+        let sender_c = sender.clone();
         choice.set_callback(move |c| {
             if let Some(choice) = c.choice() {
                 sender_c.send(LabelFilterEditMessage::LabelChanged(choice));
             }
         });
 
-        dialog.end();
-        dialog.show();
-        dialog.make_current();
+        // let sender_c = sender.clone();
+        dialog.handle(move |_, evt: Event| {
+            if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
+                // sender_c.send(LabelFilterEditMessage::ExitDialog);
+                println!("Can't exit with escape here for some reason. Gets SIGSEGV");
+                return true;
+            }
+
+            false
+        });
 
         let lens_c = self.lens.clone();
-        let mut name_done = false;
-        let mut filter_done = false;
-        let mut label_done = false;
 
         while dialog.shown() {
             while fltk::app::wait() {
                 if let Some(msg) = reciever.recv() {
+                    println!("Edit got message {:?}", msg);
                     match msg {
                         LabelFilterEditMessage::NameChanged(name) => {
                             println!("Name changed {name}");
-                            name_done = !name.trim().is_empty();
+
                             (*self.label_filter.lock()).name = name;
 
-                            self.set_save_status(&mut but_save, name_done, filter_done, label_done);
+                            self.set_save_status(&mut but_save);
                         }
                         LabelFilterEditMessage::FilterChanged(filter) => {
                             println!("Filter changed {filter}");
-                            filter_done = !filter.trim().is_empty();
+
                             (*self.label_filter.lock()).filter = filter.clone();
                             let lens_c = lens_c.lock();
                             if let Ok(entries) = lens_c.get_entries_for_regex(&filter) {
@@ -180,7 +189,7 @@ impl LabelFilterEditDialog {
                                 println!("Invalid regex");
                             }
 
-                            self.set_save_status(&mut but_save, name_done, filter_done, label_done);
+                            self.set_save_status(&mut but_save);
                         }
                         LabelFilterEditMessage::LabelChanged(label) => {
                             let lens_c = lens_c.lock();
@@ -190,11 +199,9 @@ impl LabelFilterEditDialog {
                                 println!("Got label: {} {}", label.name, label.id);
 
                                 (*self.label_filter.lock()).label_id = label.id;
-
-                                label_done = true;
                             }
 
-                            self.set_save_status(&mut but_save, name_done, filter_done, label_done);
+                            self.set_save_status(&mut but_save);
                         }
                         LabelFilterEditMessage::ListChanged => lbl_table.update(),
                         LabelFilterEditMessage::SaveClicked => {
@@ -217,13 +224,13 @@ impl LabelFilterEditDialog {
         println!("Exit Edit filter dialog");
     }
 
-    fn set_save_status(
-        &self,
-        save_button: &mut Button,
-        name_done: bool,
-        filter_done: bool,
-        label_done: bool,
-    ) {
+    fn set_save_status(&self, save_button: &mut Button) {
+        let label_filter = self.label_filter.lock();
+
+        let name_done = !label_filter.name.trim().is_empty();
+        let filter_done = !label_filter.filter.trim().is_empty();
+        let label_done = label_filter.label_id > 0;
+
         println!("Active? {name_done} {filter_done} {label_done}");
 
         if name_done && filter_done && label_done {

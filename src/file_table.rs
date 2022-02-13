@@ -10,7 +10,7 @@ use serious_organizer_lib::{
     models::File,
 };
 
-use crate::table_utils::{draw_data_color, draw_header, get_file_color, pretty_size};
+use crate::table_utils::{draw_data_color, draw_header, get_file_color, pretty_size, ColSize, ColHeader, resize_column};
 
 #[derive(Clone)]
 pub struct FileTable {
@@ -24,7 +24,12 @@ pub struct FileTable {
 
 impl FileTable {
     pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> FileTable {
-        let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
+        let headers = vec![
+            ColHeader::new("Name", ColSize::Ratio(0.7)),
+            ColHeader::new("Path", ColSize::Greedy),
+            ColHeader::new("Size", ColSize::Fixed(80)),
+        ];
+
         let mut table = FileTable {
             wid: TableRow::default().with_size(w, h),
             lens,
@@ -45,12 +50,14 @@ impl FileTable {
         table.wid.end();
         table.wid.set_rows(0);
 
+        resize_column(&mut table, &headers);
+        
         let table_c = table.clone();
         table
             .wid
             .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
                 TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
-                TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
+                TableContext::ColHeader => draw_header(&headers[col as usize].label, x, y, w, h),
                 TableContext::Cell => {
                     let dir_id = table_c.get_dir_ix();
                     if dir_id.is_some() {

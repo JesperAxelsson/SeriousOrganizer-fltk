@@ -1,7 +1,10 @@
 #![allow(clippy::too_many_arguments)]
+use std::cmp::{self};
+
 use fltk::enums::*;
+use fltk::prelude::{TableExt, WidgetExt};
+use fltk::table::TableRow;
 use fltk::*;
- 
 
 pub fn draw_header(s: &str, x: i32, y: i32, w: i32, h: i32) {
     draw::push_clip(x, y, w, h);
@@ -12,10 +15,19 @@ pub fn draw_header(s: &str, x: i32, y: i32, w: i32, h: i32) {
 }
 
 pub fn draw_data(s: &str, x: i32, y: i32, w: i32, h: i32, selected: bool, align: Align) {
-    draw_data_color(s,  x, y, w, h , Color::Gray0, selected, align)
+    draw_data_color(s, x, y, w, h, Color::Gray0, selected, align)
 }
 
-pub fn draw_data_color(s: &str, x: i32, y: i32, w: i32, h: i32, text_color: Color, selected: bool, align: Align) {
+pub fn draw_data_color(
+    s: &str,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    text_color: Color,
+    selected: bool,
+    align: Align,
+) {
     draw::push_clip(x, y, w, h);
     if selected {
         draw::set_draw_color(Color::from_u32(0xD3D3D3));
@@ -61,5 +73,205 @@ pub fn pretty_size(size: i64) -> String {
         format!("{} KB", (size / KB))
     } else {
         format!("{} B", size)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ColHeader {
+    pub label: String,
+    pub width: ColSize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ColSize {
+    Fixed(i32),
+    Ratio(f32),
+    Greedy,
+}
+
+// impl ColSize {
+
+// }
+
+impl ColHeader {
+    pub fn new(label: &str, col_size: ColSize) -> Self {
+        ColHeader {
+            label: label.to_owned(),
+            width: col_size,
+        }
+    }
+}
+
+pub fn resize_column(table: &mut TableRow, columns: &Vec<ColHeader>) {
+    const MIN_WIDTH: i32 = 50;
+    let width = table.width()-20;
+
+    let mut sum_width = 0;
+    let new_sizes = resize_column_internal(width, MIN_WIDTH, columns);
+    for (ix, width) in new_sizes.iter() {
+        table.set_col_width(*ix, *width);
+        sum_width+=*width;
+    }
+
+    println!("Cols resize, width: {} sum {} w: {}", width, sum_width, table.w()
+);
+}
+
+fn resize_column_internal(
+    table_width: i32,
+    min_width: i32,
+    columns: &Vec<ColHeader>,
+) -> Vec<(i32, i32)> {
+    let mut result = Vec::new();
+
+    let mut width_left = table_width;
+    let cols = columns.iter().enumerate().collect::<Vec<_>>();
+
+    for (ix, header) in cols
+        .iter()
+        .filter(|(_, c)| matches!(c.width, ColSize::Fixed(_)))
+    {
+        if let ColSize::Fixed(width) = header.width {
+            // table.set_col_width(*ix as i32, width);
+            result.push((*ix as i32, width));
+            width_left -= width;
+        }
+    }
+
+    let mut ratio_size = 0;
+    for (ix, header) in cols
+        .iter()
+        .filter(|(_, c)| matches!(c.width, ColSize::Ratio(_)))
+    {
+        if let ColSize::Ratio(ratio) = header.width {
+            let width = cmp::max(((width_left as f32 * ratio) as i32) as i32, min_width);
+            result.push((*ix as i32, width));
+            ratio_size += width;
+        }
+    }
+
+    width_left -= ratio_size;
+
+    let greedy_count = cols
+        .iter()
+        .filter(|(_, c)| matches!(c.width, ColSize::Greedy))
+        .count();
+
+    if greedy_count > 0 {
+        let greedy_size = cmp::max((width_left / greedy_count as i32) as i32, min_width);
+
+        for (ix, _) in cols
+            .iter()
+            .filter(|(_, c)| matches!(c.width, ColSize::Greedy))
+        {
+            result.push((*ix as i32, greedy_size));
+        }
+    }
+
+    result.sort_by_key(|e| e.0);
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fixed_simple() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Fixed(50)),
+            ColHeader::new("Size", ColSize::Fixed(50)),
+        ];
+
+        let sizes = resize_column_internal(100, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 50)]);
+    }
+
+    #[test]
+    fn test_fixed_and_greedy_simple() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Fixed(50)),
+            ColHeader::new("Size", ColSize::Greedy),
+            ColHeader::new("Size", ColSize::Fixed(50)),
+        ];
+
+        let sizes = resize_column_internal(120, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 20), (2, 50)]);
+    }
+
+    #[test]
+    fn test_ratio_simple() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Ratio(0.5)),
+            ColHeader::new("Size", ColSize::Ratio(0.5)),
+        ];
+
+        let sizes = resize_column_internal(100, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 50)]);
+    }
+
+    #[test]
+    fn test_greedy_single() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Ratio(0.5)),
+            ColHeader::new("Size", ColSize::Ratio(0.5)),
+        ];
+
+        let sizes = resize_column_internal(100, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 50)]);
+    }
+
+    #[test]
+    fn test_greedy_two() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Greedy),
+            ColHeader::new("Size", ColSize::Greedy),
+        ];
+
+        let sizes = resize_column_internal(100, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 50)]);
+    }
+
+    #[test]
+    fn test_fixed_and_ratio() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Fixed(50)),
+            ColHeader::new("Size", ColSize::Ratio(0.5)),
+        ];
+
+        let sizes = resize_column_internal(100, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 25)]);
+    }
+
+    #[test]
+    fn test_fixed_and_ratio_and_greedy() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Fixed(50)),
+            ColHeader::new("Size", ColSize::Greedy),
+            ColHeader::new("Size", ColSize::Ratio(0.5)),
+        ];
+
+        let sizes = resize_column_internal(100, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 25), (2, 25)]);
+    }
+
+    #[test]
+    fn test_fixed_and_ratio_and_greedy_width_too_small() {
+        let headers = vec![
+            ColHeader::new("Path", ColSize::Fixed(50)),
+            ColHeader::new("Size", ColSize::Greedy),
+            ColHeader::new("Size", ColSize::Ratio(2.)),
+        ];
+
+        let sizes = resize_column_internal(100, 20, &headers);
+
+        assert_eq!(sizes, vec![(0, 50), (1, 20), (2, 100)]);
     }
 }

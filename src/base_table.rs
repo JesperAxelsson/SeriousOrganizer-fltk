@@ -9,14 +9,13 @@ use serious_organizer_lib::lens::{Lens, Sort, SortColumn, SortOrder};
 use crate::table_utils::{draw_data, draw_header, pretty_size, resize_column, ColHeader, ColSize};
 
 #[derive(Clone)]
-pub struct EntryTable {
-    pub wid: TableRow,
-    lens: Arc<Mutex<Lens>>,
+pub struct BaseTable {
+    pub wid: TableRow, 
     col_sort: Arc<Mutex<Option<Sort>>>,
 }
 
-impl EntryTable {
-    pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> EntryTable {
+impl BaseTable {
+    pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> BaseTable {
         let headers = vec![
             ColHeader::new("Name", ColSize::Ratio(0.7)),
             ColHeader::new("Path", ColSize::Greedy),
@@ -112,7 +111,7 @@ impl EntryTable {
 
 use std::ops::{Deref, DerefMut};
 
-impl Deref for EntryTable {
+impl Deref for BaseTable {
     type Target = TableRow;
 
     fn deref(&self) -> &Self::Target {
@@ -120,7 +119,7 @@ impl Deref for EntryTable {
     }
 }
 
-impl DerefMut for EntryTable {
+impl DerefMut for BaseTable {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.wid
     }
