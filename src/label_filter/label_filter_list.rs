@@ -1,12 +1,13 @@
+use super::label_filter_dialog::LabelFilterMessage;
 use enums::Font;
 use fltk::app::Sender;
 use parking_lot::Mutex;
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use fltk::table::*;
 use fltk::{enums::*, prelude::*, *};
 
-use serious_organizer_lib::lens::{Label, Lens};
+use serious_organizer_lib::lens::Lens;
 
 use crate::table_utils::{draw_data, draw_header};
 
@@ -59,12 +60,12 @@ impl LabelFilterList {
 
         table
             .wid
-            .draw_cell(move |_, ctx, row, col, x, y, w, h| match ctx {
+            .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
                 table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
                 table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
                 table::TableContext::Cell => {
                     //TODO: Add selected?
-                    let selected = false;
+                    let selected = t.row_selected(row);
 
                     let lens = lens_c.lock();
                     let labels_filter = lens.get_label_filters();
@@ -77,7 +78,7 @@ impl LabelFilterList {
                             };
                         } else if col == 2 {
                             let label_lst = lens.get_labels();
-                            if let Some(lbl) = label_lst.iter().find( |l| l.id == filter.label_id) {
+                            if let Some(lbl) = label_lst.iter().find(|l| l.id == filter.label_id) {
                                 draw_data(&lbl.name, x, y, w, h, selected, Align::Left);
                             }
                         }
@@ -90,39 +91,30 @@ impl LabelFilterList {
 
     fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
         let btn = app::event_mouse_button();
+
         if evt == Event::Released && btn == app::MouseButton::Left {
             let lbl_ix = self.callback_row() as usize;
 
             // Left click
             match self.callback_context() {
-                TableContext::StartPage => println!("Label StartPage!"),
-                TableContext::EndPage => println!("Label EndPage!"),
+                TableContext::StartPage => println!("Label filter StartPage!"),
+                TableContext::EndPage => println!("Label filter EndPage!"),
                 TableContext::Cell => {
-                    let labels_list = {
+                    let label_filter_list = {
                         let lens = lens.lock();
-                        lens.get_labels().clone()
+                        lens.get_label_filters().clone()
                     };
 
-                    if let Some(lbl) = labels_list.get(lbl_ix) {
-                        let label_id: i32 = lbl.id.into();
-                        let label_id: u32 = label_id as u32;
-
-                        // {
-                        //     let mut selected_label_ids = self.selected_label_ids.lock();
-
-                        //     let lbl_is_selected = selected_label_ids.contains(&label_id);
-
-                        //     if !lbl_is_selected {
-                        //         selected_label_ids.insert(label_id);
-                        //     } else {
-                        //         selected_label_ids.remove(&label_id);
-                        //     }
-                        // }
-
-                        self.update();
-                        return true;
+                    if let Some(lbl) = label_filter_list.get(lbl_ix) {
+                        self.sender
+                            .send(LabelFilterMessage::ListSelected(Some(lbl.clone())));
+                    } else {
+                        self.sender.send(LabelFilterMessage::ListSelected(None));
                     }
+
+                    return true;
                 }
+                TableContext::Table => self.sender.send(LabelFilterMessage::ListSelected(None)), // Clicked is on table background, row is deselected
                 _ => (),
             }
         }
@@ -131,26 +123,22 @@ impl LabelFilterList {
     }
 
     pub fn update(&mut self) {
-        println!("Entry label table update");
+        println!("label filter table update");
         let label_count = {
             let mut lens = self.lens.lock();
             lens.update_label_states();
-            lens.get_labels().len()
+            lens.get_label_filters().len()
         };
 
-        println!("Label count: {}", label_count);
+        println!("Label filter count: {}", label_count);
         self.set_rows(label_count as i32);
 
-        self.sender.send(LabelFilterMessage::ListChanged);
-        // self.redraw();
+        // self.sender.send(LabelFilterMessage::ListChanged);
+        self.redraw();
     }
 }
 
 use std::ops::{Deref, DerefMut};
-
-use super::label_filter_dialog::LabelFilterMessage;
-
-// use super::label_filter_dialog::;
 
 impl Deref for LabelFilterList {
     type Target = TableRow;

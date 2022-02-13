@@ -1,85 +1,74 @@
-use enums::Font;
 use fltk::app::Sender;
 use parking_lot::Mutex;
-use std::{collections::HashSet, sync::Arc};
+use std::sync::Arc;
 
 use fltk::table::*;
 use fltk::{enums::*, prelude::*, *};
 
-use serious_organizer_lib::lens::{Label, Lens};
+// use serious_organizer_lib::lens::{Lens, Sort, SortColumn, SortOrder};
+use serious_organizer_lib::lens::Lens;
 
-use crate::table_utils::{draw_data, draw_header};
+use crate::table_utils::{draw_data, draw_header, pretty_size};
 
 #[derive(Clone)]
-pub struct LabelFilterList {
+pub struct LabelFilterPreviewList {
     pub wid: TableRow,
-    lens: Arc<Mutex<Lens>>,
-    pub sender: Sender<LabelFilterMessage>,
+    pub sender: Sender<LabelFilterEditMessage>,
+    entries: Arc<Mutex<Vec<i32>>>,
+    // col_sort: Arc<Mutex<Option<Sort>>>, // Do we need sorting here?
 }
 
-impl LabelFilterList {
+impl LabelFilterPreviewList {
     pub fn new(
-        x: i32,
-        y: i32,
         w: i32,
         h: i32,
         lens: Arc<Mutex<Lens>>,
-        sender: Sender<LabelFilterMessage>,
-    ) -> LabelFilterList {
-        let headers = vec![
-            "Name".to_string(),
-            "Filter".to_string(),
-            "Label".to_string(),
-        ];
+        sender: Sender<LabelFilterEditMessage>,
+    ) -> LabelFilterPreviewList {
+        let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
 
-        let mut table = LabelFilterList {
-            wid: TableRow::new(x, y, w, h, ""),
-            lens: lens,
+        let mut table = LabelFilterPreviewList {
+            wid: TableRow::default().with_size(w, h),
             sender: sender,
+            entries: Arc::new(Mutex::new(Vec::new())),
+            // col_sort: Arc::new(Mutex::new(None)),
         };
 
-        table.set_row_height_all(20);
-        table.set_row_resize(true);
-        table.set_type(TableRowSelectMode::Single);
+        table.wid.set_row_height_all(20);
+        table.wid.set_row_resize(true);
 
         // Cols
-        table.set_cols(headers.len() as i32);
-        table.set_col_header(true);
-        table.set_col_resize(true);
+        table.wid.set_cols(headers.len() as i32);
+        table.wid.set_col_header(true);
+        table.wid.set_col_resize(true);
 
-        table.end();
+        table.wid.end();
+        table.wid.set_rows(table.entries.lock().len() as i32);
 
-        table.update();
-
-        let lens_c = table.lens.clone();
         let mut table_c = table.clone();
-        table.handle(move |_, evt| table_c.handle_event(evt, lens_c.clone()));
+        table.handle(move |_, evt| table_c.handle_event(evt));
 
-        let lens_c = table.lens.clone();
+        let table_c = table.clone();
 
         table
             .wid
-            .draw_cell(move |_, ctx, row, col, x, y, w, h| match ctx {
-                table::TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
-                table::TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
-                table::TableContext::Cell => {
-                    //TODO: Add selected?
-                    let selected = false;
-
-                    let lens = lens_c.lock();
-                    let labels_filter = lens.get_label_filters();
-                    if let Some(filter) = labels_filter.get(row as usize) {
-                        if col == 0 || col == 1 {
-                            match col {
-                                0 => draw_data(&filter.name, x, y, w, h, selected, Align::Left),
-                                1 => draw_data(&filter.filter, x, y, w, h, selected, Align::Left),
-                                _ => (),
+            .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
+                TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
+                TableContext::ColHeader => draw_header(&headers[col as usize], x, y, w, h),
+                TableContext::Cell => {
+                    let l = lens.lock();
+                    if let Some(entry_id) = table_c.entries.lock().get(row as usize) {
+                        if let Some(entry) = l.get_dir_entry_by_id(*entry_id) {
+                            let (data, align) = {
+                                match col {
+                                    0 => (entry.name.to_string(), Align::Left),
+                                    1 => (entry.path.to_string(), Align::Left),
+                                    2 => (pretty_size(entry.size), Align::Right),
+                                    _ => ("".to_string(), Align::Center),
+                                }
                             };
-                        } else if col == 2 {
-                            let label_lst = lens.get_labels();
-                            if let Some(lbl) = label_lst.iter().find( |l| l.id == filter.label_id) {
-                                draw_data(&lbl.name, x, y, w, h, selected, Align::Left);
-                            }
+
+                            draw_data(&data, x, y, w, h, t.row_selected(row), align)
                         }
                     }
                 }
@@ -88,40 +77,28 @@ impl LabelFilterList {
         table
     }
 
-    fn handle_event(&mut self, evt: Event, lens: Arc<Mutex<Lens>>) -> bool {
+    pub fn update(&mut self) {
+        println!("Preview table upate");
+        let dir_count = { self.entries.lock().len() as i32 };
+        self.set_rows(dir_count);
+        self.set_damage(true);
+        self.set_damage_type(Damage::all());
+        self.set_changed();
+        self.redraw();
+    }
+
+    fn handle_event(&mut self, evt: Event) -> bool {
         let btn = app::event_mouse_button();
         if evt == Event::Released && btn == app::MouseButton::Left {
-            let lbl_ix = self.callback_row() as usize;
+            // let lbl_ix = self.callback_row() as usize;
 
             // Left click
             match self.callback_context() {
                 TableContext::StartPage => println!("Label StartPage!"),
                 TableContext::EndPage => println!("Label EndPage!"),
                 TableContext::Cell => {
-                    let labels_list = {
-                        let lens = lens.lock();
-                        lens.get_labels().clone()
-                    };
-
-                    if let Some(lbl) = labels_list.get(lbl_ix) {
-                        let label_id: i32 = lbl.id.into();
-                        let label_id: u32 = label_id as u32;
-
-                        // {
-                        //     let mut selected_label_ids = self.selected_label_ids.lock();
-
-                        //     let lbl_is_selected = selected_label_ids.contains(&label_id);
-
-                        //     if !lbl_is_selected {
-                        //         selected_label_ids.insert(label_id);
-                        //     } else {
-                        //         selected_label_ids.remove(&label_id);
-                        //     }
-                        // }
-
-                        self.update();
-                        return true;
-                    }
+                    //    self.update();
+                    // return true;
                 }
                 _ => (),
             }
@@ -130,29 +107,47 @@ impl LabelFilterList {
         false
     }
 
-    pub fn update(&mut self) {
-        println!("Entry label table update");
-        let label_count = {
-            let mut lens = self.lens.lock();
-            lens.update_label_states();
-            lens.get_labels().len()
-        };
+    // pub fn toggle_sort_column(&mut self, col_id: i32) {
+    //     {
+    //         let mut sort = self.col_sort.lock();
 
-        println!("Label count: {}", label_count);
-        self.set_rows(label_count as i32);
+    //         let col = match col_id {
+    //             0 => SortColumn::Name,
+    //             1 => SortColumn::Path,
+    //             2 => SortColumn::Size,
+    //             _ => panic!("Trying to dir sort unknown column"),
+    //         };
 
-        self.sender.send(LabelFilterMessage::ListChanged);
-        // self.redraw();
+    //         let ord = if let Some(s) = &*sort {
+    //             if s.column == col && s.order == SortOrder::Asc {
+    //                 SortOrder::Desc
+    //             } else {
+    //                 SortOrder::Asc
+    //             }
+    //         } else {
+    //             SortOrder::Asc
+    //         };
+
+    //         println!("Change sort column!");
+
+    //         self.lens.lock().order_by(col, ord);
+
+    //         *sort = Some(Sort::new(col, ord));
+    //     }
+    //     self.update();
+    // }
+
+    pub fn set_entries(&mut self, entries: Vec<i32>) {
+        *self.entries.lock() = entries;
+        self.sender.send(LabelFilterEditMessage::ListChanged);
     }
 }
 
 use std::ops::{Deref, DerefMut};
 
-use super::label_filter_dialog::LabelFilterMessage;
+use super::label_filter_edit_dialog::LabelFilterEditMessage;
 
-// use super::label_filter_dialog::;
-
-impl Deref for LabelFilterList {
+impl Deref for LabelFilterPreviewList {
     type Target = TableRow;
 
     fn deref(&self) -> &Self::Target {
@@ -160,7 +155,7 @@ impl Deref for LabelFilterList {
     }
 }
 
-impl DerefMut for LabelFilterList {
+impl DerefMut for LabelFilterPreviewList {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.wid
     }

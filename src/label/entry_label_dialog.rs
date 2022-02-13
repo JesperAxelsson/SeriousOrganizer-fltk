@@ -52,7 +52,6 @@ impl EntryLabelDialog {
     }
 
     pub fn show(&self) {
-        // TODO: Maybe use refactor to use more sender instead.
         let (sender, reciever) = channel::<LabelMessage>();
 
         let mut dialog = Window::new(300, 100, 210, 260, "Select Labels");

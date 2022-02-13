@@ -137,7 +137,7 @@ fn main() {
     let mut but_reload = Button::default().with_size(60, 25).with_label("Reload");
     let mut but = Button::default().with_size(80, 25).with_label("Locations");
     let mut label_filter = Button::default()
-        .with_size(80, 25)
+        .with_size(100, 25)
         .with_label("Label Filters");
 
     top_pack.end();
