@@ -102,7 +102,7 @@ impl LabelFilterList {
                 TableContext::Cell => {
                     let label_filter_list = {
                         let lens = lens.lock();
-                        lens.get_label_filters().clone()
+                        lens.get_label_filters()
                     };
 
                     if let Some(lbl) = label_filter_list.get(lbl_ix) {

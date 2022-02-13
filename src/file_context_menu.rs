@@ -19,7 +19,7 @@ pub fn show_file_context_menu(
     lens: Arc<Mutex<Lens>>,
     sender: Sender<Message>,
 ) {
-    if selection.len() > 0 {
+    if !selection.is_empty() {
         println!("Context menu!");
 
         let choices = vec![
@@ -53,7 +53,7 @@ pub fn show_file_context_menu(
 
                 match val.label().unwrap().as_str() {
                     "Delete File" => {
-                        delete_files(files, lens.clone());
+                        delete_files(files, lens);
                         sender.send(Message::FileTableInvalidated);
                     }
                     // "Rename Entry" => {
@@ -81,7 +81,7 @@ fn delete_files(files: Vec<File>, lens: Arc<Mutex<Lens>>) {
 
     for file in files.iter() {
         lens.remove_file(file)
-            .expect(&format!("Failed to remove entry {}", file.name));
+            .unwrap_or_else(|_| panic!("Failed to remove entry {}", file.name));
     }
 }
 

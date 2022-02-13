@@ -128,9 +128,9 @@ impl LocationDialog {
 
                 let locations = lens.get_locations();
                 let loc = &locations[loc_ix as usize];
-                let loc_id: i32 = loc.id.into();
+                let loc_id = loc.id as u32;
 
-                lens.remove_location(loc_id as u32);
+                lens.remove_location(loc_id);
 
                 let len = lens.get_locations().len();
                 table_c.set_rows(len as i32);

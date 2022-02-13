@@ -106,9 +106,7 @@ impl EntryLabelList {
                     };
 
                     if let Some(lbl) = labels_list.get(lbl_ix) {
-                        let label_id: i32 = lbl.id.into();
-                        let label_id: u32 = label_id as u32;
-
+                        let label_id = lbl.id as u32;
                         {
                             let mut selected_label_ids = self.selected_label_ids.lock();
 

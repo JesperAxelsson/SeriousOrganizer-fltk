@@ -8,9 +8,9 @@ use fltk::{button::*, window::*};
 
 use fltk::prelude::*;
 
+use parking_lot::Mutex;
 use serious_organizer_lib::lens::Lens;
 use serious_organizer_lib::models::LabelAutoFilter;
-use parking_lot::Mutex;
 use std::sync::Arc;
 
 use crate::label_filter::label_filter_preview_list::LabelFilterPreviewList;
@@ -75,7 +75,6 @@ impl LabelFilterEditDialog {
         let _spacer = Frame::default().with_size(40, 25);
         let mut choice = Choice::default().with_size(120, 25).with_label("Label");
 
- 
         for label in self.lens.lock().get_labels().iter() {
             choice.add_choice(&label.name);
         }
@@ -90,20 +89,20 @@ impl LabelFilterEditDialog {
         top_row.end();
         top_row.set_spacing(10);
         top_row.set_type(PackType::Horizontal);
-        col.set_size(&mut top_row, 25);
+        col.set_size(&top_row, 25);
 
         let lens_c = self.lens.clone();
         let sender_c = sender.clone();
         let mut lbl_table = LabelFilterPreviewList::new(200, 205, lens_c, sender_c);
 
-        let mut bot_row = Flex::default_fill().row();
+        let bot_row = Flex::default_fill().row();
 
         let mut but_save = Button::new(10, 10, 60, 25, "Save");
         but_save.deactivate();
         let mut but_cancel = Button::new(80, 10, 60, 25, "Cancel");
 
         top_row.end();
-        col.set_size(&mut bot_row, 25);
+        col.set_size(&bot_row, 25);
 
         col.end();
 
@@ -111,7 +110,6 @@ impl LabelFilterEditDialog {
         but_save.emit(sender.clone(), LabelFilterEditMessage::SaveClicked);
 
         // Button cancel callback
-
         but_cancel.emit(sender.clone(), LabelFilterEditMessage::ExitDialog);
 
         // Handle dialog escape
@@ -119,6 +117,7 @@ impl LabelFilterEditDialog {
         dialog.handle(move |_, evt: Event| {
             if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
                 sender_c.send(LabelFilterEditMessage::ExitDialog);
+                return true;
             }
 
             false
@@ -141,7 +140,7 @@ impl LabelFilterEditDialog {
         });
 
         // Selected label
-        let sender_c = sender.clone();
+        let sender_c = sender;
         choice.set_callback(move |c| {
             if let Some(choice) = c.choice() {
                 sender_c.send(LabelFilterEditMessage::LabelChanged(choice));
@@ -215,7 +214,7 @@ impl LabelFilterEditDialog {
             }
         }
 
-        println!("Exit labellist");
+        println!("Exit Edit filter dialog");
     }
 
     fn set_save_status(

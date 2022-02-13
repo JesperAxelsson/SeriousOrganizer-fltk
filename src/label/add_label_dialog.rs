@@ -42,7 +42,7 @@ impl AddLabelDialog {
             if let Some(ref name) = *lbl {
                 {
                     let mut lens = lens_c.lock();
-                    lens.add_label(&name);
+                    lens.add_label(name);
                 }
                 dialog_c.hide();
                 sender_c.send(Message::LabelTableInvalidated);

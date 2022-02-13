@@ -143,7 +143,7 @@ fn main() {
     top_pack.end();
     top_pack.set_spacing(10);
     top_pack.set_type(group::PackType::Horizontal);
-    col.set_size(&mut top_pack, 25);
+    col.set_size(&top_pack, 25);
 
     // Setup dir table
     let label_width = 195;
@@ -166,7 +166,7 @@ fn main() {
     let sender_c = sender.clone();
     let mut label_list = label_list::LabelList::new(label_width, h_size, lens.clone(), sender_c);
 
-    table_row.set_size(&mut label_list.wid, label_width);
+    table_row.set_size(&label_list.wid, label_width);
 
     table_row.resizable(&table_col);
     table_row.end();

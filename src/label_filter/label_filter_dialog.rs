@@ -49,7 +49,7 @@ impl LabelFilterDialog {
         let mut col = Flex::default_fill().column();
         col.set_margin(10);
 
-        let mut row = Flex::default_fill().row();
+        let row = Flex::default_fill().row();
 
         Button::default()
             .with_label("Run")
@@ -61,7 +61,7 @@ impl LabelFilterDialog {
         Button::new(80, 10, 60, 25, "Exit").emit(sender.clone(), LabelFilterMessage::ExitDialog);
 
         row.end();
-        col.set_size(&mut row, 25);
+        col.set_size(&row, 25);
 
         let mut lbl_table =
             LabelFilterList::new(10, 50, 200, 205, self.lens.clone(), sender.clone());
@@ -93,18 +93,22 @@ impl LabelFilterDialog {
         while dialog.shown() {
             while fltk::app::wait() {
                 if let Some(msg) = reciever.recv() {
+                    println!("Filter dialog got message {:?}", msg);
+
                     match msg {
                         LabelFilterMessage::RunFilters => self.run_filters(),
                         LabelFilterMessage::ShowNewDialog => {
                             let lens_c = self.lens.clone();
                             let dialog = LabelFilterEditDialog::new(lens_c.clone());
                             dialog.show_new();
+                            println!("Show done");
                             sender.send(LabelFilterMessage::ListChanged);
+                            println!("Message sent");
                         }
                         LabelFilterMessage::ShowEditDialog => {
                             if let Some(label_filter) = &*self.selected_label_filter.lock() {
                                 let dialog = LabelFilterEditDialog::new(self.lens.clone());
-                                dialog.show_edit(&label_filter);
+                                dialog.show_edit(label_filter);
                                 sender.send(LabelFilterMessage::ListChanged);
                             } else {
                                 println!("ShowEditDialog got no label filter selected!");
@@ -132,6 +136,7 @@ impl LabelFilterDialog {
                             *self.selected_label_filter.lock() = label_filter;
                         }
                         LabelFilterMessage::ExitDialog => {
+                            println!("Filter dialog got exit");
                             dialog_c.hide();
                             break;
                         }
@@ -140,7 +145,7 @@ impl LabelFilterDialog {
             }
         }
 
-        println!("Exit labellist");
+        println!("Exit label filter dialog");
     }
 
     fn run_filters(&self) {

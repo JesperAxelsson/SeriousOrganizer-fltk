@@ -97,6 +97,7 @@ impl EntryLabelDialog {
             let entries = entry_ids_c.iter().copied().collect();
             lens.add_entry_labels(entries, cur_select);
 
+            #[allow(clippy::map_clone)]
             let to_remove: Vec<u32> = labels
                 .difference(&*currently_selected_labels)
                 .collect::<HashSet<&u32>>()
@@ -120,7 +121,7 @@ impl EntryLabelDialog {
             sender_c.send(LabelMessage::ExitDialog);
         });
 
-        let sender_c = sender.clone();
+        let sender_c = sender;
         dialog.handle(move |_, evt: Event| {
             if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
                 sender_c.send(LabelMessage::ExitDialog);
