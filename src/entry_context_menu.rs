@@ -5,13 +5,13 @@ use serious_organizer_lib::models::Entry;
 use std::fs::metadata;
 use std::sync::Arc;
 
-use fltk::{app, app::*,  menu::*};
-use fltk::{  prelude::*};
- 
+use fltk::prelude::*;
+use fltk::{app, app::*, menu::*};
+
 use serious_organizer_lib::lens::Lens;
-   
+
 use crate::model::message::Message;
- 
+
 use crate::choice_dialog::ChoiceDialog;
 use crate::error_dialog::ErrorDialog;
 use crate::label::add_label_dialog;
@@ -24,10 +24,10 @@ pub fn show_entry_context_menu(
     sender: Sender<Message>,
     wind: &mut Window,
 ) {
-    if selection.len() > 0 {
+    if !selection.is_empty() {
         println!("Context menu!");
 
-        let entry_ix = selection.iter().next().unwrap();
+        let entry_ix = selection.get(0).unwrap();
         let entry = {
             lens.lock()
                 .get_dir_entry(*entry_ix as usize)
@@ -35,10 +35,8 @@ pub fn show_entry_context_menu(
                 .clone()
         };
 
-        let meta = metadata(&entry.path).expect(&format!(
-            "Failed to find meta data for entry! path: {}",
-            entry.path
-        ));
+        let meta = metadata(&entry.path)
+            .unwrap_or_else(|_| panic!("Failed to find meta data for entry! path: {}", entry.path));
 
         let choices = if meta.is_file() {
             vec![
@@ -73,16 +71,14 @@ pub fn show_entry_context_menu(
 
                 match val.label().unwrap().as_str() {
                     "Add label" => {
-                        let dialog =
-                            add_label_dialog::AddLabelDialog::new(lens.clone(), sender.clone());
+                        let dialog = add_label_dialog::AddLabelDialog::new(lens, sender.clone());
                         dialog.show();
                     }
                     "Label >" => {
                         println!("Got entries: {:?}", entries);
 
                         // Label select dialog
-                        let dialog =
-                            entry_label_dialog::EntryLabelDialog::new(lens.clone(), entries);
+                        let dialog = entry_label_dialog::EntryLabelDialog::new(lens, entries);
 
                         wind.deactivate();
                         dialog.show();
@@ -94,7 +90,7 @@ pub fn show_entry_context_menu(
                         sender.send(Message::EntryTableInvalidated);
                     }
                     "Rename Entry" => {
-                        let dialog = RenameDialog::new(lens.clone(), entry);
+                        let dialog = RenameDialog::new(lens, entry);
                         dialog.show();
                         sender.send(Message::EntryTableInvalidated);
                     }
@@ -139,7 +135,7 @@ fn delete_entry(entries: Vec<Entry>, lens: Arc<Mutex<Lens>>) {
 
     for entry in entries.iter() {
         lens.remove_entry(entry)
-            .expect(&format!("Failed to remove entry {}", entry.name));
+            .unwrap_or_else(|_| panic!("Failed to remove entry {}", entry.name));
     }
 }
 
