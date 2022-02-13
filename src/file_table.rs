@@ -27,7 +27,7 @@ impl FileTable {
         let headers = vec!["Name".to_string(), "Path".to_string(), "Size".to_string()];
         let mut table = FileTable {
             wid: TableRow::default().with_size(w, h),
-            lens: lens,
+            lens,
             dir_id: Arc::new(AtomicIsize::new(-1)),
             file_id: Arc::new(AtomicIsize::new(-1)),
             files: Arc::new(Mutex::new(None)),

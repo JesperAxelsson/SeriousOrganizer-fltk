@@ -29,7 +29,7 @@ impl LabelFilterPreviewList {
 
         let mut table = LabelFilterPreviewList {
             wid: TableRow::default().with_size(w, h),
-            sender: sender,
+            sender,
             entries: Arc::new(Mutex::new(Vec::new())),
             // col_sort: Arc::new(Mutex::new(None)),
         };

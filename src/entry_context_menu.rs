@@ -71,7 +71,7 @@ pub fn show_entry_context_menu(
 
                 match val.label().unwrap().as_str() {
                     "Add label" => {
-                        let dialog = add_label_dialog::AddLabelDialog::new(lens, sender.clone());
+                        let dialog = add_label_dialog::AddLabelDialog::new(lens, sender);
                         dialog.show();
                     }
                     "Label >" => {
@@ -86,7 +86,7 @@ pub fn show_entry_context_menu(
                         sender.send(Message::EntryTableInvalidated);
                     }
                     "Delete Entry" => {
-                        delete_entry(entries, lens.clone());
+                        delete_entry(entries, lens);
                         sender.send(Message::EntryTableInvalidated);
                     }
                     "Rename Entry" => {

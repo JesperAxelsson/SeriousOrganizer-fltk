@@ -26,7 +26,7 @@ impl LabelList {
         // let x2 = dyn_clone::clone_box(&*on_update);
         let mut table = LabelList {
             wid: TableRow::default().with_size(w, h),
-            lens: lens,
+            lens,
             sender,
         };
 

@@ -35,8 +35,8 @@ impl LabelFilterList {
 
         let mut table = LabelFilterList {
             wid: TableRow::new(x, y, w, h, ""),
-            lens: lens,
-            sender: sender,
+            lens,
+            sender,
         };
 
         table.set_row_height_all(20);

@@ -32,9 +32,9 @@ impl EntryLabelList {
 
         let mut table = EntryLabelList {
             wid: TableRow::new(x, y, w, h, ""),
-            lens: lens,
+            lens,
             selected_label_ids,
-            sender: sender,
+            sender,
         };
 
         table.set_row_height_all(20);
