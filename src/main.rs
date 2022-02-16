@@ -15,6 +15,7 @@ use serious_organizer_lib::lens::Lens;
 #[macro_use]
 extern crate log;
 
+mod base_table;
 mod choice_dialog;
 mod entry_context_menu;
 mod entry_table;
@@ -38,6 +39,7 @@ use model::message::Message;
 use label::label_list;
 use location::location_dialog;
 use location::location_table;
+
 
 pub fn get_selected_index(table: &mut TableRow) -> Vec<u32> {
     let mut selected = Vec::new();
@@ -154,11 +156,12 @@ fn main() {
 
     let lens_c = lens.clone();
 
-    let mut dir_tbl = EntryTable::new(w_size - label_width - 10, 390, lens_c);
+    let mut dir_tbl = EntryTable::new(  lens_c);
+
 
     let mut file_tbl = FileTable::new(w_size - label_width - 10, 260, lens.clone());
 
-    table_col.resizable(&dir_tbl.wid);
+    table_col.resizable(&*dir_tbl);
     table_col.resizable(&file_tbl.wid);
 
     table_col.end();
@@ -354,7 +357,7 @@ fn main() {
                 Message::EntryChanged(ix) => file_tbl.set_dir_ix(ix),
 
                 Message::EntryTableInvalidated => {
-                    dir_tbl.update();
+                    dir_tbl.wid.update();
                     let ix = get_selected_index(&mut dir_tbl);
                     if !ix.is_empty() {
                         sender.send(Message::EntryChanged(Some(ix[0] as usize)));
@@ -362,7 +365,7 @@ fn main() {
                         sender.send(Message::EntryChanged(None));
                     }
                 }
-                Message::EntryTableSortCol(col) => dir_tbl.toggle_sort_column(col),
+                Message::EntryTableSortCol(col) => dir_tbl.wid.toggle_sort_column(col),
                 Message::EntryShowContextMenu(selection) => {
                     show_entry_context_menu(selection, lens.clone(), sender.clone(), &mut wind)
                 }

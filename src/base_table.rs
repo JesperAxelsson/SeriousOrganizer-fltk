@@ -4,28 +4,55 @@ use std::sync::Arc;
 use fltk::table::*;
 use fltk::{enums::*, prelude::*, *};
 
-use serious_organizer_lib::lens::{Lens, Sort, SortColumn, SortOrder};
+use crate::table_utils::{draw_data, draw_header,  resize_column, ColHeader};
 
-use crate::table_utils::{draw_data, draw_header, pretty_size, resize_column, ColHeader, ColSize};
+type RowCountCallback = dyn Fn() -> i32 + Send + Sync + 'static;
+type RowDataCallback = dyn Fn(i32, i32) -> String + Send + Sync + 'static;
+
+#[derive(Debug, Clone, Copy)]
+pub struct Sort {
+    pub column: i32,
+    pub order: SortOrder,
+}
+
+impl Sort {
+    pub fn new(column: i32, order: SortOrder) -> Self {
+        Sort { column, order }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[repr(u32)]
+pub enum SortOrder {
+    Asc = 0,
+    Desc = 1,
+}
 
 #[derive(Clone)]
 pub struct BaseTable {
-    pub wid: TableRow, 
+    pub wid: TableRow,
     col_sort: Arc<Mutex<Option<Sort>>>,
+    row_count_callback: Arc<Mutex<RowCountCallback>>,
+    row_data_callback: Arc<Mutex<RowDataCallback>>,
 }
 
 impl BaseTable {
-    pub fn new(w: i32, h: i32, lens: Arc<Mutex<Lens>>) -> BaseTable {
-        let headers = vec![
-            ColHeader::new("Name", ColSize::Ratio(0.7)),
-            ColHeader::new("Path", ColSize::Greedy),
-            ColHeader::new("Size", ColSize::Fixed(80)),
-        ];
+    pub fn new<
+        F: Fn() -> i32 + 'static + Send + Sync,
+        F2: Fn(i32, i32) -> String + 'static + Send + Sync,
+    >(
+        headers: Vec<ColHeader>,
+        row_count_callback: F,
+        row_data_callback: F2,
+    ) -> BaseTable {
+        // pub fn new(w: i32, h: i32, row_count_callback: &'static RowCountCallback) -> BaseTable {
 
-        let mut table = EntryTable {
-            wid: TableRow::default().with_size(w, h),
-            lens,
+
+        let mut table = BaseTable {
+            wid: TableRow::default(),
             col_sort: Arc::new(Mutex::new(None)),
+            row_count_callback: Arc::new(Mutex::new(row_count_callback)),
+            row_data_callback: Arc::new(Mutex::new(row_data_callback)),
         };
 
         table.wid.set_row_height_all(20);
@@ -37,31 +64,31 @@ impl BaseTable {
         table.wid.set_col_resize(true);
 
         table.wid.end();
-        table.wid.set_rows(table.lens.lock().get_dir_count() as i32);
+        table.wid.set_rows(table.row_count_callback.lock()());
 
         resize_column(&mut table, &headers);
 
-        let lens_c = table.lens.clone();
-
+        // let lens_c = table.lens.clone();
+        let mut table_c = table.clone();
+        let mut first_run= true;
         table
             .wid
             .draw_cell(move |t, ctx, row, col, x, y, w, h| match ctx {
-                TableContext::StartPage => draw::set_font(Font::Helvetica, 14),
+                TableContext::StartPage => {
+                    draw::set_font(Font::Helvetica, 14);
+                
+                if first_run {
+                    resize_column(&mut table_c, &headers);
+                    first_run=false;
+                }},
+
                 TableContext::ColHeader => draw_header(&headers[col as usize].label, x, y, w, h),
                 TableContext::Cell => {
-                    let l = lens_c.lock();
-                    if let Some(dir) = l.get_dir_entry(row as usize) {
-                        let (data, align) = {
-                            match col {
-                                0 => (dir.name.to_string(), Align::Left),
-                                1 => (dir.path.to_string(), Align::Left),
-                                2 => (pretty_size(dir.size), Align::Right),
-                                _ => ("".to_string(), Align::Center),
-                            }
-                        };
-
-                        draw_data(&data, x, y, w, h, t.row_selected(row), align)
-                    }
+          
+                    let align = headers[col as usize].align;
+                    let row_data = table_c.row_data_callback.lock()(row, col);
+                    draw_data(&row_data, x, y, w, h, t.row_selected(row), align)
+               
                 }
                 _ => (),
             });
@@ -70,7 +97,7 @@ impl BaseTable {
 
     pub fn update(&mut self) {
         println!("Entry table upate");
-        let dir_count = { self.lens.lock().get_dir_count() as i32 };
+        let dir_count = { self.row_count_callback.lock()() };
         self.set_rows(dir_count);
         self.set_damage(true);
         self.set_damage_type(Damage::all());
@@ -101,7 +128,7 @@ impl BaseTable {
 
             println!("Change sort column!");
 
-            self.lens.lock().order_by(col, ord);
+            // self.lens.lock().order_by(col, ord);
 
             *sort = Some(Sort::new(col, ord));
         }
