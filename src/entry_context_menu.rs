@@ -47,7 +47,13 @@ pub fn show_entry_context_menu(
                 "Move to Dir",
             ]
         } else {
-            vec!["Add label", "Label >", "Delete Entry", "Rename Entry"]
+            vec![
+                "Add label",
+                "Label >",
+                "Delete Entry",
+                "Rename Entry",
+                "Open dir",
+            ]
         };
 
         let x = MenuItem::new(&choices);
@@ -114,6 +120,9 @@ pub fn show_entry_context_menu(
                         } else {
                             println!("Abort dir thing");
                         }
+                    }
+                    "Open dir" => {
+                        open::that_in_background(&entry.path);
                     }
                     _ => {
                         println!("Unknown popup string: {}", val.label().unwrap())
