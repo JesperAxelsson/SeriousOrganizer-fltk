@@ -193,6 +193,7 @@ impl LabelList {
     }
 
     pub fn update(&mut self) {
+        self.redraw();
         self.update_size();
     }
 }

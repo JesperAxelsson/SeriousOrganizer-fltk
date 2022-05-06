@@ -5,6 +5,8 @@ use simplelog::{CombinedLogger, Config, SimpleLogger};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use fltk::{app, app::*, button::*, frame, group, input::*, table::TableContext, window};
 use fltk::{enums::*, image, prelude::*};
@@ -23,6 +25,7 @@ mod file_context_menu;
 mod file_table;
 mod label;
 mod label_filter;
+mod loading_dialog;
 mod location;
 mod model;
 mod rename_dialog;
@@ -38,6 +41,8 @@ use model::message::Message;
 use label::label_list;
 use location::location_dialog;
 use location::location_table;
+
+use crate::label::add_label_dialog;
 
 pub fn get_selected_index(table: &mut TableRow) -> Vec<u32> {
     let mut selected = Vec::new();
@@ -163,10 +168,28 @@ fn main() {
 
     table_col.end();
 
+    // Filter Column
+    let mut filter_col = group::Flex::default_fill().column();
+
     let sender_c = sender.clone();
     let mut label_list = label_list::LabelList::new(label_width, h_size, lens.clone(), sender_c);
 
-    table_row.set_size(&label_list.wid, label_width);
+    let mut filter_button_pack = group::Pack::default().with_size(w_size - 10, 25);
+
+    let mut but_filter_none = Button::default().with_size(55, 25).with_label("None");
+    let mut but_filter_reset = Button::default().with_size(55, 25).with_label("Reset");
+    let mut but_filter_add = Button::default().with_size(55, 25).with_label("Add");
+
+    filter_button_pack.end();
+    filter_button_pack.set_spacing(10);
+    filter_button_pack.set_type(group::PackType::Horizontal);
+
+    filter_col.set_size(&filter_button_pack, 25);
+    filter_col.resizable(&label_list.wid);
+
+    filter_col.end();
+
+    table_row.set_size(&filter_col, label_width);
 
     table_row.resizable(&table_col);
     table_row.end();
@@ -180,20 +203,32 @@ fn main() {
 
     // * Reload button *
     let lens_c = lens.clone();
+    let sender_c = sender.clone();
 
     but_reload.set_callback(move |_| {
-        let mut lens = lens_c.lock();
-        println!("Start update data");
+        let lens_c = lens_c.clone();
+        let sender_c = sender_c.clone();
 
-        let paths = lens
-            .get_locations()
-            .iter()
-            .map(|e| (e.id, e.path.clone()))
-            .collect();
-        let mut dir_s = dir_search::get_all_data(paths);
+        sender_c.send(Message::ShowLoading);
 
-        lens.update_data(&mut dir_s);
-        println!("Done update data");
+        thread::spawn(move || {
+            println!("Start update data");
+            let mut lens = lens_c.lock();
+
+            let paths = lens
+                .get_locations()
+                .iter()
+                .map(|e| (e.id, e.path.clone()))
+                .collect();
+            let mut dir_s = dir_search::get_all_data(paths);
+
+            lens.update_data(&mut dir_s);
+
+            thread::sleep(Duration::from_millis(10_000));
+
+            sender_c.send(Message::HideLoading);
+            println!("Done update data");
+        });
     });
 
     // * Locations *
@@ -322,6 +357,48 @@ fn main() {
         // println!("Banan editing {} found: {}", input_c.value(), dir_count);
     });
 
+    let lens_c = lens.clone();
+    let sender_c = sender.clone();
+
+    but_filter_none.set_callback(move |_| {
+        let mut lens = lens_c.lock();
+        let labels = { lens.get_labels().clone() };
+        for lbl in labels.iter() {
+            lens.add_exclude_label(lbl.id as u32);
+        }
+
+        lens.update_ix_list();
+
+        sender_c.send(Message::EntryTableInvalidated);
+        sender_c.send(Message::FileTableInvalidated);
+        sender_c.send(Message::LabelTableInvalidated);
+    });
+
+    let lens_c = lens.clone();
+    let sender_c = sender.clone();
+
+    but_filter_reset.set_callback(move |_| {
+        let mut lens = lens_c.lock();
+        let labels = { lens.get_labels().clone() };
+        for lbl in labels.iter() {
+            lens.remove_label_filter(lbl.id as u32);
+        }
+
+        lens.update_ix_list();
+
+        sender_c.send(Message::EntryTableInvalidated);
+        sender_c.send(Message::FileTableInvalidated);
+        sender_c.send(Message::LabelTableInvalidated);
+    });
+
+    let lens_c = lens.clone();
+    let sender_c = sender.clone();
+
+    but_filter_add.set_callback(move |_| {
+        let dialog = add_label_dialog::AddLabelDialog::new(lens_c.clone(), sender_c.clone());
+        dialog.show();
+    });
+
     wind.handle(move |h_wnd, evt: Event| {
         if evt == Event::Activate {
             println!("Wind activate!");
@@ -343,6 +420,8 @@ fn main() {
 
         false
     });
+
+    let mut loading_dialog = loading_dialog::LoadingDialog::new();
 
     while app.wait() {
         if let Some(msg) = reciever.recv() {
@@ -383,6 +462,10 @@ fn main() {
                         open::that_in_background(path);
                     }
                 }
+
+                // Loading Dialog
+                Message::ShowLoading => loading_dialog.show(),
+                Message::HideLoading => loading_dialog.hide(),
             }
         }
     }

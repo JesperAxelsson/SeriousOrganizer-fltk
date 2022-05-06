@@ -116,16 +116,16 @@ impl LabelFilterDialog {
                         }
                         LabelFilterMessage::DeleteSelected => {
                             if let Some(label_filter) = &*self.selected_label_filter.lock() {
-                                let choice = dialog::choice_default(
+                                let choice = dialog::choice2_default(
                                     &format!("Would you like to delete '{}'", label_filter.name),
                                     "No",
                                     "Yes",
                                     "",
                                 );
-                                if choice == 1{
+                                if choice.unwrap_or(0) == 1 {
                                     let mut lens_c = self.lens.lock();
                                     lens_c.delete_label_filter(label_filter);
-                                    
+
                                     sender.send(LabelFilterMessage::ListSelected(None));
                                     sender.send(LabelFilterMessage::ListChanged);
                                 }

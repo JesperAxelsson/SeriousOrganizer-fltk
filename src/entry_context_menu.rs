@@ -14,7 +14,6 @@ use crate::model::message::Message;
 
 use crate::choice_dialog::ChoiceDialog;
 use crate::error_dialog::ErrorDialog;
-use crate::label::add_label_dialog;
 use crate::label::entry_label_dialog;
 use crate::rename_dialog::RenameDialog;
 
@@ -35,29 +34,6 @@ pub fn show_entry_context_menu(
                 .clone()
         };
 
-        let meta = metadata(&entry.path)
-            .unwrap_or_else(|_| panic!("Failed to find meta data for entry! path: {}", entry.path));
-
-        let choices = if meta.is_file() {
-            vec![
-                "Add label",
-                "Label >",
-                "Delete Entry",
-                "Rename Entry",
-                "Move to Dir",
-            ]
-        } else {
-            vec![
-                "Add label",
-                "Label >",
-                "Delete Entry",
-                "Rename Entry",
-                "Open dir",
-            ]
-        };
-
-        let x = MenuItem::new(&choices);
-
         let mut entries = Vec::new();
         {
             let lens = lens.lock();
@@ -69,6 +45,30 @@ pub fn show_entry_context_menu(
             }
         }
 
+        let has_file = entries.iter().any(|e| {
+            let meta = if let Ok(meta) = metadata(&e.path) {
+                meta
+            } else {
+                println!("Failed to find meta data for entry! path: {}", e.path);
+                let err_dialog = ErrorDialog::new(format!(
+                    "Failed to find meta data for entry! path: {}",
+                    e.path
+                ));
+                err_dialog.show();
+                return false;
+            };
+
+            meta.is_file()
+        });
+
+        let choices = if has_file {
+            vec!["Label >", "Delete Entry", "Rename Entry", "Move to Dir"]
+        } else {
+            vec!["Label >", "Delete Entry", "Rename Entry", "Open dir"]
+        };
+
+        let x = MenuItem::new(&choices);
+
         // let x = MenuItem::new(&v);
         match x.popup(app::event_x(), app::event_y()) {
             None => println!("No value was chosen!"),
@@ -76,10 +76,6 @@ pub fn show_entry_context_menu(
                 println!("{}", val.label().unwrap());
 
                 match val.label().unwrap().as_str() {
-                    "Add label" => {
-                        let dialog = add_label_dialog::AddLabelDialog::new(lens, sender);
-                        dialog.show();
-                    }
                     "Label >" => {
                         println!("Got entries: {:?}", entries);
 
@@ -102,23 +98,30 @@ pub fn show_entry_context_menu(
                     }
                     "Move to Dir" => {
                         let dialog = ChoiceDialog::new(
-                            format!("Move {:?} to a dir?", entry.path),
+                            "Move selected files to a dir?".to_string(),
                             vec!["Yes".to_string(), "No".to_string()],
                         );
 
                         dialog.show();
                         if dialog.result() == 0 {
                             {
-                                let result = lens.lock().move_file_entry_to_dir_entry(entry);
-                                if let Err(err) = result {
-                                    println!("Error while renaming file: {:?}", err);
-                                    let err_dialog = ErrorDialog::new(err.to_string());
-                                    err_dialog.show();
+                                let mut lens = lens.lock();
+                                for e in entries.iter() {
+                                    if let Ok(meta) = metadata(&e.path) {
+                                        if meta.is_file() {
+                                            let result = lens.move_file_entry_to_dir_entry(e);
+                                            if let Err(err) = result {
+                                                println!("Error while renaming file: {:?}", err);
+                                                let err_dialog = ErrorDialog::new(err.to_string());
+                                                err_dialog.show();
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             sender.send(Message::EntryTableInvalidated);
                         } else {
-                            println!("Abort dir thing");
+                            println!("Abort dir move");
                         }
                     }
                     "Open dir" => {

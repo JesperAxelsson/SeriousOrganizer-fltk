@@ -15,4 +15,8 @@ pub enum Message {
     FileTableChanged(usize),
     FileShowContextMenu(Vec<u32>),
     FileTableOpen,
+
+    // Loading Events
+    ShowLoading,
+    HideLoading,
 }
