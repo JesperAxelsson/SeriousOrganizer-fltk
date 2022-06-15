@@ -125,7 +125,9 @@ pub fn show_entry_context_menu(
                         }
                     }
                     "Open dir" => {
-                        open::that_in_background(&entry.path);
+                        if let Err(e) = open::that(&entry.path) {
+                            eprintln !("Failed to open path: {} Error {}", entry.path, e);
+                        }
                     }
                     _ => {
                         println!("Unknown popup string: {}", val.label().unwrap())
