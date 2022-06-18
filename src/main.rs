@@ -6,7 +6,6 @@ use simplelog::{CombinedLogger, Config, SimpleLogger};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
 
 use fltk::{app, app::*, button::*, frame, group, input::*, table::TableContext, window};
 use fltk::{enums::*, image, prelude::*};
@@ -220,11 +219,62 @@ fn main() {
                 .iter()
                 .map(|e| (e.id, e.path.clone()))
                 .collect();
-            let mut dir_s = dir_search::get_all_data(paths);
+
+            let mut dir_s = dir_search::get_all_data(&paths);
+            // let mut dir_new = dir_search::get_all_data2(&paths);
+
+            // for i in 0..dir_new.len() {
+            //     let new = &dir_new[i].1;
+            //     let old = &dir_s[i].1;
+
+            //     if new.name != old.name {
+            //         println!("Got dir mismatch! name");
+            //         println!("new {:?}", new.name);
+            //         println!("old {:?}", old.name);
+            //         println!("------");
+            //     }
+
+            //     if new.size != old.size {
+            //         println!("Got dir mismatch! size ");
+            //     }
+
+            //     if new.path != old.path {
+            //         println!("Got dir mismatch! path");
+            //     }
+
+            //     if new.location_id != old.location_id {
+            //         println!("Got dir mismatch! location_id ");
+            //     }
+
+            //     if new.files.len() != old.files.len() {
+            //         println!("Got dir mismatch! files.len PAth: {:?}", new.path);
+            //         println!("new {:?}", new.files.len());
+            //         println!("old {:?}", old.files.len());
+
+            //         println!("Extra in new: ");
+            //         for f in new.files.iter() {
+            //             if !old.files.contains(&f) {
+            //                 println!("{:?}", f.name);
+            //             }
+            //         }
+
+            //         println!("------");
+            //     } else {
+            //         for f in new.files.iter() {
+            //             if !old.files.contains(&f) {
+            //                 println!("File missmatch: {:?}", f.name);
+            //             }
+            //         }
+
+            //         for f in old.files.iter() {
+            //             if !new.files.contains(&f) {
+            //                 println!("File missmatch: {:?}", f.name);
+            //             }
+            //         }
+            //     }
+            // }
 
             lens.update_data(&mut dir_s);
-
-            thread::sleep(Duration::from_millis(10_000));
 
             sender_c.send(Message::HideLoading);
             println!("Done update data");
@@ -458,8 +508,9 @@ fn main() {
                     println!("Running file table open {:?}", path);
 
                     if let Some(path) = path {
-                        println!("Open! {}", path);
-                        open::that_in_background(path);
+                        if let Err(e) = open::that(&path) {
+                            eprintln!("Failed to open file path: {} Error {}", path, e);
+                        }
                     }
                 }
 
