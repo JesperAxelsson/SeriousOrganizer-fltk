@@ -104,17 +104,21 @@ impl ColHeader {
 
 pub fn resize_column(table: &mut TableRow, columns: &Vec<ColHeader>) {
     const MIN_WIDTH: i32 = 50;
-    let width = table.width()-20;
+    let width = table.width() - 20;
 
-    let mut sum_width = 0;
+    // let mut sum_width = 0;
     let new_sizes = resize_column_internal(width, MIN_WIDTH, columns);
     for (ix, width) in new_sizes.iter() {
         table.set_col_width(*ix, *width);
-        sum_width+=*width;
+        // sum_width += *width;
     }
 
-    println!("Cols resize, width: {} sum {} w: {}", width, sum_width, table.w()
-);
+    // println!(
+    //     "Cols resize, width: {} sum {} w: {}",
+    //     width,
+    //     sum_width,
+    //     table.w()
+    // );
 }
 
 fn resize_column_internal(
