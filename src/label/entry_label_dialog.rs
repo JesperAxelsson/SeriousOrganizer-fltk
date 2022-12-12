@@ -56,7 +56,7 @@ impl EntryLabelDialog {
 
         let mut dialog = Window::new(300, 100, 210, 260, "Select Labels");
         dialog.make_modal(true);
-        println!("Make modal");
+        println!("Make label modal");
         let mut but_save = Button::new(10, 10, 60, 25, "Save");
         let mut but_cancel = Button::new(80, 10, 60, 25, "Cancel");
 
@@ -115,24 +115,28 @@ impl EntryLabelDialog {
         });
 
         // Button cancel callback
-        let mut dialog_c = dialog.clone();
         let sender_c = sender.clone();
         but_cancel.set_callback(move |_| {
             sender_c.send(LabelMessage::ExitDialog);
         });
 
+        dialog.end();
+        dialog.show();
+        dialog.make_current();
+
         let sender_c = sender;
         dialog.handle(move |_, evt: Event| {
-            if evt.contains(Event::Shortcut) && app::event_key() == Key::Escape {
+            if evt.contains(Event::Hide)
+                || (evt.contains(Event::Shortcut) && app::event_key() == Key::Escape)
+            {
                 sender_c.send(LabelMessage::ExitDialog);
+                return true;
             }
 
             false
         });
 
-        dialog.end();
-        dialog.show();
-        dialog.make_current();
+        let mut dialog_c = dialog.clone();
 
         while dialog.shown() {
             while fltk::app::wait() {

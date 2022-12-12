@@ -14,6 +14,7 @@ use crate::table_utils::{draw_data, draw_header};
 pub struct EntryLabelList {
     pub wid: TableRow,
     lens: Arc<Mutex<Lens>>,
+    // pub prev_selected_label_ids: Arc<HashSet<u32>>,
     pub selected_label_ids: Arc<Mutex<HashSet<u32>>>,
     pub sender: Sender<LabelMessage>,
 }
