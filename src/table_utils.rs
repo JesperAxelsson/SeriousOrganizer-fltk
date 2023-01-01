@@ -76,6 +76,51 @@ pub fn pretty_size(size: i64) -> String {
     }
 }
 
+#[derive(Debug)]
+pub enum Grade {
+    S = 255,
+    A = 254,
+    B = 253,
+    C = 252,
+    D = 251,
+    E = 250,
+    F = 249,
+}
+
+impl TryFrom<i32> for Grade {
+    type Error = ();
+
+    fn try_from(v: i32) -> Result<Self, Self::Error> {
+        match v {
+            x if x == Grade::S as i32 => Ok(Grade::S),
+            x if x == Grade::A as i32 => Ok(Grade::A),
+            x if x == Grade::B as i32 => Ok(Grade::B),
+            x if x == Grade::C as i32 => Ok(Grade::C),
+            x if x == Grade::D as i32 => Ok(Grade::D),
+            x if x == Grade::E as i32 => Ok(Grade::E),
+            x if x == Grade::F as i32 => Ok(Grade::F),
+            _ => Err(()),
+        }
+    }
+}
+
+pub fn pretty_grade(grade: Option<i32>) -> String {
+    if let Some(grade) = grade {
+        return match grade.try_into() {
+            Ok(Grade::S) => "S".to_owned(),
+            Ok(Grade::A) => "A".to_owned(),
+            Ok(Grade::B) => "B".to_owned(),
+            Ok(Grade::C) => "C".to_owned(),
+            Ok(Grade::D) => "D".to_owned(),
+            Ok(Grade::E) => "E".to_owned(),
+            Ok(Grade::F) => "F".to_owned(),
+            Err(_) => "".to_owned(),
+        };
+    }
+
+    "".to_string()
+}
+
 #[derive(Debug, Clone)]
 pub struct ColHeader {
     pub label: String,

@@ -209,6 +209,7 @@ impl FileTable {
                 SortColumn::Name => a.name.cmp(&b.name),
                 SortColumn::Path => a.path.cmp(&b.path),
                 SortColumn::Size => a.size.cmp(&b.size),
+                SortColumn::Grade => unimplemented!("Files does not support grades!"),
             }
         };
 

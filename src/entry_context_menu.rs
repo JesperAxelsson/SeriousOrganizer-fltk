@@ -62,9 +62,9 @@ pub fn show_entry_context_menu(
         });
 
         let choices = if has_file {
-            vec!["Label >", "Delete Entry", "Rename Entry", "Move to Dir"]
+            vec!["Label >", "Delete Entry", "Rename Entry", "Grade", "Move to Dir"]
         } else {
-            vec!["Label >", "Delete Entry", "Rename Entry", "Open dir"]
+            vec!["Label >", "Delete Entry", "Rename Entry", "Grade", "Open dir"]
         };
 
         let x = MenuItem::new(&choices);
@@ -128,6 +128,9 @@ pub fn show_entry_context_menu(
                         if let Err(e) = open::that(&entry.path) {
                             eprintln !("Failed to open path: {} Error {}", entry.path, e);
                         }
+                    }
+                    "Grade" => {
+                     // Show grade choices
                     }
                     _ => {
                         println!("Unknown popup string: {}", val.label().unwrap())

@@ -6,7 +6,7 @@ use fltk::{enums::*, prelude::*, *};
 
 use serious_organizer_lib::lens::{Lens, Sort, SortColumn, SortOrder};
 
-use crate::table_utils::{draw_data, draw_header, pretty_size, resize_column, ColHeader, ColSize};
+use crate::table_utils::{draw_data, draw_header, pretty_size, resize_column, ColHeader, ColSize, pretty_grade};
 
 #[derive(Clone)]
 pub struct EntryTable {
@@ -21,6 +21,7 @@ impl EntryTable {
             ColHeader::new("Name", ColSize::Ratio(0.7)),
             ColHeader::new("Path", ColSize::Greedy),
             ColHeader::new("Size", ColSize::Fixed(80)),
+            ColHeader::new("Grade", ColSize::Fixed(40)),
         ];
 
         let mut table = EntryTable {
@@ -57,6 +58,7 @@ impl EntryTable {
                                 0 => (dir.name.to_string(), Align::Left),
                                 1 => (dir.path.to_string(), Align::Left),
                                 2 => (pretty_size(dir.size), Align::Right),
+                                3 => (pretty_grade(dir.grade), Align::Center),
                                 _ => ("".to_string(), Align::Center),
                             }
                         };
@@ -87,6 +89,7 @@ impl EntryTable {
                 0 => SortColumn::Name,
                 1 => SortColumn::Path,
                 2 => SortColumn::Size,
+                3 => SortColumn::Grade,
                 _ => panic!("Trying to dir sort unknown column"),
             };
 
